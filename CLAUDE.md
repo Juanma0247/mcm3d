@@ -102,8 +102,8 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 1. Anclaje del camino al mundo real: GPS, sensores y ARCore. Cerrado, ver "Discusión de la idea".
 2. Mapas, rutas y datos offline: fuentes, importación, grabación, elevación, paquete de zona. Cerrado.
 3. Interfaz y experiencia de uso. Cerrado.
-4. Stack técnico. En curso.
-5. Optimización de CPU, memoria y batería (cámara + GPS + render).
+4. Stack técnico. Cerrado.
+5. Optimización de CPU, memoria y batería (cámara + GPS + render). En curso.
 
 ## Discusión de la idea
 
@@ -197,7 +197,7 @@ Ajustes tras las respuestas:
 - Vibración: el ritmo indica el tipo de aviso y la intensidad indica la urgencia (en el bolsillo se distingue mejor el ritmo que la intensidad). Propuesta: bifurcación a 50 m, un toque muy suave; bifurcación inmediata, dos toques suaves; punto de referencia, dos toques medios espaciados; regreso a la ruta, un toque medio; desviación, tres pulsos fuertes repetidos cada ~10 s hasta volver o descartar; GPS perdido o batería baja, pulso largo más uno corto. Intensidad ajustable. Pendiente: leer en el S23 Ultra si soporta control de amplitud y primitivas hápticas; en celulares sin control de amplitud se usa solo el ritmo.
 - Play Store: detectar los sensores disponibles y degradar con elegancia (muchos gama media y baja no tienen giroscopio ni barómetro); grabar con servicio en primer plano iniciado por el usuario para no pedir permiso de ubicación en segundo plano; ARCore marcado como opcional; atribuciones obligatorias (© OpenStreetMap contributors, fuente de elevación); textos en recursos desde el inicio (español primero, inglés después); accesibilidad (escala de fuente, contraste, TalkBack fuera de la vista AR); la instancia pública de Overpass tiene límites de uso justo, así que a escala habrá que evaluar paquetes de zona preprocesados propios.
 
-### 4. Stack técnico (en curso desde el 2026-10-27)
+### 4. Stack técnico (cerrado el 2026-10-27)
 
 Propuesta inicial:
 
@@ -213,11 +213,33 @@ Propuesta inicial:
 - Plan B: ARCore usa el mismo renderizador OpenGL; opcional en el manifiesto.
 - Pruebas: JUnit en `:core` con sesiones grabadas (fuera del repo) y datos sintéticos (en el repo).
 
+Respuestas del usuario:
+
+- Mapa 2D propio en OpenGL: sí. La propuesta de stack queda aprobada.
+- Dominio del usuario: `juanma.cc`; nombre de la app: `mcm3d`. El usuario propuso `juanma.cc.mcm3d`; la convención de Android es el dominio invertido, `cc.juanma.mcm3d`. Pendiente de confirmar antes de crear el proyecto (no se puede cambiar después de publicar).
+- Reporte de fallos: Android vitals de Play Console más registro local de fallos en el celular; Crashlytics se evalúa más adelante.
+
+### 5. Optimización de CPU, memoria y batería (en curso desde el 2026-10-27)
+
+Propuesta inicial:
+
+- Presupuesto: la pantalla (sobre todo con brillo alto al sol) y la cámara son lo que más gasta; luego GPU, GNSS y CPU. Los sensores corren en el procesador de sensores de bajo consumo.
+- Objetivos iniciales a medir en el S23 Ultra: modo bolsillo ≤ 4 %/h; mapa 2D en pantalla ≤ 10 %/h; vista AR ≤ 20 %/h; una salida de 8 h con ~1 h total de AR termina con ≥ 40 % de batería. Render ≤ 10 ms por cuadro, memoria < 150 MB en AR, descarga < 15 MB, arranque en frío < 1 s.
+- GNSS: 1 Hz cerca de bifurcaciones o fuera de ruta; en tramos largos sin decisiones, intervalo mayor con el modo de bajo consumo del chip (capacidad LOW_POWER_MODE). Mediciones crudas solo en diagnóstico.
+- Sensores: en bolsillo, pasos y barómetro con batching por hardware (el procesador principal duerme); en AR, Game Rotation Vector a ~100 Hz y magnetómetro a 10 a 20 Hz.
+- CPU: todo por eventos, sin bucles de sondeo ni temporizadores; sin crear objetos en los caminos calientes (sensores, render) para no activar el recolector de basura; índice espacial en el paquete de zona para el ajuste a la ruta; todo lo costoso se precalcula al importar o descargar (ruta densificada, alturas, distancias acumuladas, bifurcaciones y ángulos, prioridades de etiquetas, textura de relieve).
+- Render: 30 fps sincronizado con la cámara y `Surface.setFrameRate(30)` para que la pantalla baje su frecuencia; en el mapa 2D sin movimiento, render solo cuando algo cambia; mallas de cinta regeneradas solo cada pocos metros de avance y solo para el tramo visible; shaders simples, sin postprocesado; etiquetas en un atlas de texturas generado una vez.
+- Cámara: solo en AR, con histéresis al inclinar para no encender y apagar; se mantiene abierta unos segundos al bajar el celular para que volver a AR sea instantáneo; vista previa a 720p; imagen de cámara ligeramente atenuada (en AMOLED ahorra energía y mejora el contraste de la cinta).
+- Pantalla: tema oscuro en mapa y listas; pantalla encendida forzada solo mientras se mira la navegación; el modo sol sube el contraste, no el brillo.
+- Escritura: puntos de la salida guardados por lotes (cada ~30 s), no en cada lectura.
+- Temperatura: vigilar el estado térmico del sistema y degradar (fps, resolución de cámara) antes de que el celular se caliente al sol.
+- Medición: corriente instantánea de la batería (`BATTERY_PROPERTY_CURRENT_NOW`) en la pantalla de diagnóstico, `dumpsys batterystats` y trazas de Perfetto por adb.
+- Gamas bajas (después): menos fps y resolución, menos etiquetas, cinta más simple, según memoria y clase de rendimiento del dispositivo.
+
 Preguntas abiertas:
 
-- ¿Mapa 2D propio en OpenGL en lugar de un SDK de mapas?
-- applicationId definitivo (no se puede cambiar después de publicar) y nombre de la app.
-- ¿Reporte de fallos (por ejemplo Firebase Crashlytics) desde el inicio o más adelante?
+- ¿Se aprueban los objetivos iniciales de consumo y rendimiento?
+- Duración típica de una salida y con qué frecuencia se mira la vista AR.
 
 ## Decisiones tomadas
 
@@ -237,3 +259,5 @@ Preguntas abiertas:
 - 2026-10-27: objetivo de publicación en Play Store; UX/UI pulida desde ahora; adaptación a gamas bajas después de validar en el S23 Ultra.
 - 2026-10-27: estilo sobrio, técnico y profesional; tema oscuro por defecto con alto contraste para pleno sol.
 - 2026-10-27: avisos hápticos diferenciados por tipo (ritmo) y urgencia (intensidad).
+- 2026-10-27: stack aprobado (ver "Discusión de la idea", punto 4), con mapa 2D propio en OpenGL y sin SDK de mapas.
+- 2026-10-27: reporte de fallos con Android vitals y registro local; Crashlytics más adelante.
