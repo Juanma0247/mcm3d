@@ -75,7 +75,9 @@ Requisitos: Android 11 o superior; PC y celular en la misma red Wi-Fi.
 
    `adb devices` debe listar el celular con estado `device`.
 
-`adb mdns services` muestra los celulares visibles en la red, para no tener que leer el puerto en pantalla.
+La vinculación se hace una sola vez por PC; el código cambia cada vez que se abre el diálogo, pero solo se necesita al vincular. Si se borra el PC de "Dispositivos vinculados" en el celular, hay que vincular de nuevo.
+
+El puerto de conexión cambia cada vez que se activa la depuración inalámbrica. Si PC y celular están en la misma subred, `adb` lo descubre solo por mDNS (`adb mdns services`) y se reconecta automáticamente. Si están en subredes distintas (por ejemplo `192.168.0.x` y `192.168.1.x`), mDNS no funciona: hay que dictar el puerto o usar `tools/connect-phone.ps1`.
 
 **Problemas comunes**
 

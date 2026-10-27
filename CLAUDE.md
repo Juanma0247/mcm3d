@@ -15,6 +15,7 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 |---|---|
 | `CLAUDE.md` | Este archivo: idea general, estado, decisiones, ideas y backlog. |
 | `docs/flujo-de-trabajo.md` | Guía para preparar el PC, conectar el celular (USB o Wi-Fi) y el ciclo editar, compilar, probar. |
+| `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Sin probar: el sistema de permisos bloqueó su ejecución. |
 | `app/` | (Pendiente) módulo Android en Kotlin. |
 
 ## Idea general
@@ -58,7 +59,7 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 
 ### En curso
 
-- Vincular el S23 Ultra con `adb` por depuración inalámbrica.
+- Conectar el S23 Ultra con `adb` por depuración inalámbrica. Ya está vinculado (`adb-R5CX60MG4SM`), pero el PC (`192.168.0.x`, red DESIGNIO2) y el celular (`192.168.1.x`) están en subredes distintas: la conexión TCP funciona, pero mDNS no cruza subredes, así que `adb` no descubre solo el puerto de conexión, que cambia cada vez que se activa la depuración inalámbrica.
 - Siguiente paso: discusión de la idea (dificultades, alcance, interfaz, stack, optimización).
 
 ### Por implementar (borrador, se ajusta tras la discusión)

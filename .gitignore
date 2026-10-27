@@ -23,6 +23,8 @@ desktop.ini
 *.ap_
 *.dex
 
+tools/.last-phone
+
 # Field recordings and device dumps contain real locations
 recordings/
 device-logs/
