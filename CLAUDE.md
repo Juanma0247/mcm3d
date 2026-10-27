@@ -32,6 +32,8 @@ Fuentes de información:
 
 Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, procesamiento, memoria y energía.
 
+Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele haber cobertura celular pero sí cielo abierto. El camino queda fijo en el mundo y la pantalla lo revela al mover el celular (estilo Pokémon GO). Muestra qué sendero tomar en cada bifurcación, el recorrido hecho (de dónde venimos) y el que falta (hacia dónde vamos). Las rutas se importan de otras apps (Relive, Komoot, Wikiloc) o se graban con la app.
+
 ## Flujo de desarrollo (propuesto, pendiente de confirmar)
 
 - Claude escribe el código en este workspace, compila con Gradle desde la terminal (`gradlew`) e instala en el celular físico con `adb` (USB o depuración inalámbrica). Android Studio es opcional (debugger y profilers).
@@ -77,51 +79,77 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 ### Por implementar (borrador, se ajusta tras la discusión)
 
 1. Esqueleto del proyecto (Kotlin, Gradle, script de despliegue al celular).
-2. Pantalla de diagnóstico: precisión del GPS, orientación, frecuencia de sensores, calibración de la brújula.
+2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro. Decide si hace falta ARCore.
 3. Cámara en vivo con un marcador fijo hacia un punto conocido (validar que orientación y proyección cuadran).
-4. Obtención de rutas en línea y almacenamiento para uso sin conexión.
-5. Dibujo del camino como línea 3D proyectada sobre la cámara.
-6. Optimización de energía, memoria y rendimiento.
+4. Grabación de rutas en segundo plano e importación de GPX/KML/KMZ.
+5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación.
+6. Vista AR: ruta por delante y recorrido hecho, fijos en el mundo, con ajuste a la ruta y aviso en bifurcaciones.
+7. Plan B: ARCore, solo si el diagnóstico lo justifica.
+8. Optimización de energía, memoria y rendimiento.
 
 ### Ideas
 
 - Modo grabación y reproducción de sensores: grabar una caminata (GPS + IMU) y reproducirla en el PC para ajustar los algoritmos sin salir a caminar cada vez.
 - Capa de depuración en pantalla (precisión, rumbo, FPS, consumo) activable en builds de desarrollo.
 - Compilar el APK en GitHub Actions para instalarlo desde el celular sin estar en el PC.
+- "Volver por donde vine": guiar de regreso por el recorrido grabado, útil sin cobertura.
 
 ### Temas para la discusión (en este orden)
 
-1. Anclaje del camino al mundo real: GPS, sensores y ARCore. En curso, ver "Discusión de la idea".
-2. Mapas y rutas offline: fuente de datos (OpenStreetMap), motor de rutas, formato de almacenamiento.
+1. Anclaje del camino al mundo real: GPS, sensores y ARCore. Cerrado, ver "Discusión de la idea".
+2. Mapas, rutas y datos offline: fuentes, importación, grabación, elevación, paquete de zona. En curso.
 3. Interfaz y experiencia de uso.
 4. Stack técnico (incluye el motor de render: OpenGL ES, Vulkan, Filament/SceneView o Canvas 2D).
 5. Optimización de CPU, memoria y batería (cámara + GPS + render).
 
 ## Discusión de la idea
 
-### 1. Anclaje del camino al mundo real (2026-10-27, en curso)
+### 1. Anclaje del camino al mundo real (cerrado el 2026-10-27)
 
-Conclusiones provisionales:
+Respuestas del usuario:
 
-- El error de posición del GPS domina cerca (el tramo a los pies se ve corrido) y el error de rumbo domina lejos (todo el camino gira alrededor del usuario). Con 3 m de error lateral, un punto a 5 m se desvía unos 31°; con 10° de error de rumbo, un punto a 100 m queda corrido unos 17 m.
-- Solo con GPS + sensores se logra una guía de dirección (rumbo con ±10° o más, varios metros de desfase), no un camino pintado en la acera. Mitigaciones: ajustar al usuario sobre la ruta (map matching) para que el camino siempre salga de sus pies; corregir el sesgo de la brújula con el rumbo de avance del GPS y la dirección de la calle; usar Game Rotation Vector para la orientación de corto plazo; descartar lecturas magnéticas anómalas comparándolas con `GeomagneticField` (modelo WMM, offline); sincronizar la orientación con el instante de cada cuadro de la cámara; gesto de ajuste manual del rumbo.
-- ARCore (seguimiento visual-inercial) funciona sin internet, ya está instalado en el S23 Ultra, da una pose estable sincronizada con la cámara y detecta el suelo. No da posición ni rumbo absolutos: hay que alinearlo con el mundo ajustando su trayectoria a la del GPS mientras se camina, lo que estima el rumbo mucho mejor que la brújula.
-- Geospatial API de ARCore (VPS con Street View) da posición y rumbo precisos al instante, pero requiere internet y clave de Google Cloud: solo como mejora opcional en línea.
-- Construir un seguimiento visual propio (VIO) no vale la pena: es trabajo de investigación de años y ARCore lo resuelve.
-- La representación visual debe tolerar el error: cinta ancha y semitransparente, marcadores altos en los giros, camino visible a través de edificios ("radiografía", sin necesidad de oclusión ni profundidad), más difuso cuando la incertidumbre es alta.
-- No es viable: precisión de centímetros sin conexión, navegación en interiores sin infraestructura, rumbo exacto desde el primer segundo estando quieto, ni un camino exacto sobre la acera si el mapa solo tiene el eje de la vía.
-- Arquitectura propuesta en capas: (1) fusión propia GPS + sensores + map matching, siempre activa; (2) ARCore cuando la cámara está abierta y el seguimiento es bueno; (3) Geospatial opcional con internet.
-- Primer hito propuesto: pantalla de diagnóstico que mida los errores reales en el celular y grabe sesiones, para decidir con datos.
+- Escenario: senderos de los alrededores de Manizales, sin cobertura celular pero a campo abierto. La mayoría de senderos está en los mapas, aunque algunos con poca precisión, sobre todo en altura.
+- ARCore: solo como segunda opción si la base con GPS y sensores resulta muy imprecisa.
+- "Radiografía": el camino queda fijo en el mundo y la pantalla lo revela al moverla (estilo Pokémon GO), visible a través de obstáculos, sin calcular oclusión.
+- Precisión esperada: guía de dirección y giros (qué sendero tomar en cada bifurcación), con la proyección del recorrido hecho y del que falta.
+- Rutas: importar las de otras apps (Relive, Komoot, Wikiloc) y grabar y guardar rutas propias.
+
+Conclusiones:
+
+- El error de posición del GPS domina cerca y el de rumbo domina lejos: 3 m de error lateral desvían unos 31° un punto a 5 m; 10° de error de rumbo corren unos 17 m un punto a 100 m.
+- Capa 1, base siempre activa: fusión propia GPS + sensores + ajuste a la ruta (map matching) para que el camino salga de los pies del usuario; Game Rotation Vector para la orientación inmediata; brújula corregida con la dirección de avance y la del sendero, descartando lecturas anómalas con `GeomagneticField` (modelo WMM, offline); orientación sincronizada con cada cuadro de la cámara; estabilización de video desactivada; gesto de ajuste manual del rumbo.
+- Capa 2, plan B: ARCore (offline), alineado con el GPS ajustando trayectorias mientras se camina. Solo si el diagnóstico muestra que la capa 1 no alcanza.
+- Descartado: Geospatial API (requiere internet, fuera del objetivo), seguimiento visual propio (VIO), oclusión y profundidad.
+- El escenario favorece la capa 1: a cielo abierto el GPS de doble frecuencia suele dar 2 a 5 m, y sin carros ni estructuras metálicas la brújula es más confiable. Riesgos: bosque cerrado (el GPS empeora), subidas lentas (la dirección de avance del GPS es menos fiable), zigzags cerrados (el ajuste a la ruta puede confundir tramos).
+- Bifurcaciones: se resuelven bien si las ramas se separan más de unos 20 a 30°. Para ramas casi paralelas: distancia a la bifurcación, rama incorrecta atenuada y detección rápida de salida de ruta.
+- Representación: cinta ancha y semitransparente, marcadores altos en giros y bifurcaciones, ruta por delante y recorrido hecho con colores distintos, más difusa cuando hay más incertidumbre.
+- No viable: precisión de centímetros sin conexión, interiores, rumbo exacto desde el primer segundo estando quieto.
+
+### 2. Mapas, rutas y datos offline (en curso desde el 2026-10-27)
+
+Propuesta inicial:
+
+- Datos que deben estar en el celular antes de salir: la ruta a seguir, la red de senderos de la zona (OpenStreetMap) y un modelo de elevación (OSM no guarda alturas).
+- Importación por archivo GPX (y KML/KMZ) mediante "Compartir" o "Abrir con" y un selector de archivos. Relive, Komoot y Wikiloc no tienen API pública abierta para sincronizar.
+- Al importar, ajustar la ruta a los senderos de OSM donde coinciden y conservar la línea grabada donde OSM no tiene el sendero.
+- Grabación con servicio en primer plano, guardando puntos solo al moverse unos metros o cambiar de dirección, con altura del barómetro; exportación a GPX.
+- Elevación: Terrain Tiles de AWS (formato Terrarium, PNG que Android decodifica de forma nativa) o Copernicus DEM (GeoTIFF, mejor calidad, más complejo). Usar altura relativa al usuario, leída del mismo modelo, más el barómetro para seguir los cambios reales de altura.
+- Paquete de zona: con internet, el usuario elige la zona y la app descarga los senderos (Overpass API) y las teselas de elevación, los procesa una vez y los guarda en formato compacto. En el sendero solo se leen.
+- Rutas nuevas A→B: algoritmo propio (A* con penalización por pendiente) sobre el grafo de senderos de la zona, como fase posterior.
 
 Preguntas abiertas:
 
-- Escenario principal de uso: ciudad a pie, senderos y montaña, bicicleta o vehículo.
-- ¿Se acepta depender de ARCore (Google Play Services for AR)?
-- ¿"Radiografía" significa ver el camino a través de edificios y obstáculos?
-- Precisión visual esperada: ¿camino pintado en la acera o guía de dirección y giros?
-- ¿"Camino previamente trazado" es una ruta calculada de A a B, un recorrido grabado o dibujado por el usuario (GPX), o ambos?
+- ¿Hace falta calcular rutas nuevas sobre los senderos o basta con seguir rutas importadas o grabadas?
+- ¿"Relieve" es Relive? ¿Cuál de las tres apps se usa más?
+- Conseguir un GPX real de un sendero conocido cerca de Manizales para pruebas.
+- ¿Zona fija (alrededores de Manizales) o descarga de cualquier zona elegida?
 
 ## Decisiones tomadas
 
 - 2026-10-27: entorno sin Android Studio (opción B). Claude instala Temurin JDK 17 con `winget` y el Android SDK por línea de comandos; Android Studio se puede agregar después para perfilar.
 - 2026-10-27: dispositivo de pruebas único: Samsung Galaxy S23 Ultra (Android 16). Sin emulador.
+- 2026-10-27: escenario objetivo: senderismo alrededor de Manizales, sin cobertura y a campo abierto.
+- 2026-10-27: anclaje en dos capas: base propia con GPS y sensores, y ARCore solo como plan B si la base resulta imprecisa. Geospatial API fuera del objetivo.
+- 2026-10-27: el camino queda fijo en el mundo y se revela al mover el celular, visible a través de obstáculos, sin oclusión.
+- 2026-10-27: precisión objetivo: guía de dirección, giros y bifurcaciones, mostrando el recorrido hecho y el que falta.
+- 2026-10-27: rutas importadas de otras apps (Relive, Komoot, Wikiloc) y grabadas con la app.
