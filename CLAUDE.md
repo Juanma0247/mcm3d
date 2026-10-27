@@ -35,7 +35,7 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 
 Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele haber cobertura celular pero sí cielo abierto. El camino queda fijo en el mundo y la pantalla lo revela al mover el celular (estilo Pokémon GO). Muestra qué sendero tomar en cada bifurcación, el recorrido hecho (de dónde venimos) y el que falta (hacia dónde vamos). Las rutas se importan de otras apps (Relive, Komoot, Wikiloc) o se graban con la app.
 
-## Flujo de desarrollo (propuesto, pendiente de confirmar)
+## Flujo de desarrollo
 
 - Claude escribe el código en este workspace, compila con Gradle desde la terminal (`gradlew`) e instala en el celular físico con `adb` (USB o depuración inalámbrica). Android Studio es opcional (debugger y profilers).
 - No se usa emulador: no tiene cámara ni sensores reales, que son el núcleo de la app.
@@ -73,15 +73,17 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - 2026-10-27: entorno de compilación listo: JDK 17, Android SDK (API 36) y adb, sin Android Studio.
 - 2026-10-27: depuración USB e inalámbrica activadas en el S23 Ultra (Bloqueador automático desactivado).
 - 2026-10-27: S23 Ultra vinculado y conectado por depuración inalámbrica; perfil de hardware leído con adb.
+- 2026-10-27: discusión de la idea completa (5 temas cerrados, ver "Discusión de la idea"). Ruta de prueba validada contra OSM y elevación.
 
 ### En curso
 
-- Siguiente paso: discusión de la idea (dificultades, alcance, interfaz, stack, optimización).
+- Próxima sesión: empezar el desarrollo con el hito 1 (esqueleto del proyecto `cc.juanma.mcm3d`, script de despliegue al celular y pantalla de diagnóstico). El usuario pidió no empezar el desarrollo el 2026-10-27.
+- Pendiente: leer las capacidades de vibración del S23 Ultra (`adb shell dumpsys vibrator_manager`: control de amplitud y primitivas hápticas). No se pudo porque la depuración inalámbrica se había apagado.
 
 ### Por implementar (borrador, se ajusta tras la discusión)
 
 1. Esqueleto del proyecto (Kotlin, Gradle, script de despliegue al celular).
-2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro. Decide si hace falta ARCore.
+2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro y consumo de corriente. Decide si hace falta ARCore.
 3. Cámara en vivo con un marcador fijo hacia un punto conocido (validar que orientación y proyección cuadran).
 4. Grabación de rutas en segundo plano e importación de GPX/KML/KMZ.
 5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación (elegir entre Terrarium y Copernicus comparándolos en la ruta de prueba).
@@ -103,7 +105,7 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 2. Mapas, rutas y datos offline: fuentes, importación, grabación, elevación, paquete de zona. Cerrado.
 3. Interfaz y experiencia de uso. Cerrado.
 4. Stack técnico. Cerrado.
-5. Optimización de CPU, memoria y batería (cámara + GPS + render). En curso.
+5. Optimización de CPU, memoria y batería (cámara + GPS + render). Cerrado.
 
 ## Discusión de la idea
 
@@ -216,15 +218,15 @@ Propuesta inicial:
 Respuestas del usuario:
 
 - Mapa 2D propio en OpenGL: sí. La propuesta de stack queda aprobada.
-- Dominio del usuario: `juanma.cc`; nombre de la app: `mcm3d`. El usuario propuso `juanma.cc.mcm3d`; la convención de Android es el dominio invertido, `cc.juanma.mcm3d`. Pendiente de confirmar antes de crear el proyecto (no se puede cambiar después de publicar).
+- Dominio del usuario: `juanma.cc`; nombre de la app: `mcm3d`. applicationId confirmado: `cc.juanma.mcm3d` (dominio invertido, convención de Android; no se puede cambiar después de publicar).
 - Reporte de fallos: Android vitals de Play Console más registro local de fallos en el celular; Crashlytics se evalúa más adelante.
 
-### 5. Optimización de CPU, memoria y batería (en curso desde el 2026-10-27)
+### 5. Optimización de CPU, memoria y batería (cerrado el 2026-10-27)
 
 Propuesta inicial:
 
 - Presupuesto: la pantalla (sobre todo con brillo alto al sol) y la cámara son lo que más gasta; luego GPU, GNSS y CPU. Los sensores corren en el procesador de sensores de bajo consumo.
-- Objetivos iniciales a medir en el S23 Ultra: modo bolsillo ≤ 4 %/h; mapa 2D en pantalla ≤ 10 %/h; vista AR ≤ 20 %/h; una salida de 8 h con ~1 h total de AR termina con ≥ 40 % de batería. Render ≤ 10 ms por cuadro, memoria < 150 MB en AR, descarga < 15 MB, arranque en frío < 1 s.
+- Objetivos iniciales a medir en el S23 Ultra: modo bolsillo ≤ 4 %/h; mapa 2D en pantalla ≤ 10 %/h; vista AR ≤ 20 %/h; una salida típica termina con ≥ 30 % de batería (ver presupuesto abajo). Render ≤ 10 ms por cuadro, memoria < 150 MB en AR, descarga < 15 MB, arranque en frío < 1 s.
 - GNSS: 1 Hz cerca de bifurcaciones o fuera de ruta; en tramos largos sin decisiones, intervalo mayor con el modo de bajo consumo del chip (capacidad LOW_POWER_MODE). Mediciones crudas solo en diagnóstico.
 - Sensores: en bolsillo, pasos y barómetro con batching por hardware (el procesador principal duerme); en AR, Game Rotation Vector a ~100 Hz y magnetómetro a 10 a 20 Hz.
 - CPU: todo por eventos, sin bucles de sondeo ni temporizadores; sin crear objetos en los caminos calientes (sensores, render) para no activar el recolector de basura; índice espacial en el paquete de zona para el ajuste a la ruta; todo lo costoso se precalcula al importar o descargar (ruta densificada, alturas, distancias acumuladas, bifurcaciones y ángulos, prioridades de etiquetas, textura de relieve).
@@ -236,10 +238,21 @@ Propuesta inicial:
 - Medición: corriente instantánea de la batería (`BATTERY_PROPERTY_CURRENT_NOW`) en la pantalla de diagnóstico, `dumpsys batterystats` y trazas de Perfetto por adb.
 - Gamas bajas (después): menos fps y resolución, menos etiquetas, cinta más simple, según memoria y clase de rendimiento del dispositivo.
 
-Preguntas abiertas:
+Respuestas del usuario:
 
-- ¿Se aprueban los objetivos iniciales de consumo y rendimiento?
-- Duración típica de una salida y con qué frecuencia se mira la vista AR.
+- Los objetivos sirven para empezar; se optimiza sobre la marcha del desarrollo.
+- Salida típica: 8 h, con hasta 20 % del tiempo en la vista AR y otro 20 % en las demás funciones en pantalla (mapa 2D y resto).
+
+Presupuesto de batería de una salida típica (peor caso, con los objetivos por modo):
+
+| Modo | Tiempo | Consumo |
+|---|---|---|
+| Vista AR (20 %) | 1,6 h × 20 %/h | 32 % |
+| Mapa 2D y resto en pantalla (20 %) | 1,6 h × 10 %/h | 16 % |
+| Bolsillo (60 %) | 4,8 h × 4 %/h | 19 % |
+| Total | 8 h | 67 % (queda ~33 %) |
+
+Para terminar con ≥ 40 % habría que bajar la vista AR a ~15 %/h (total ~59 %). La vista AR es el modo a optimizar primero.
 
 ## Decisiones tomadas
 
@@ -261,3 +274,5 @@ Preguntas abiertas:
 - 2026-10-27: avisos hápticos diferenciados por tipo (ritmo) y urgencia (intensidad).
 - 2026-10-27: stack aprobado (ver "Discusión de la idea", punto 4), con mapa 2D propio en OpenGL y sin SDK de mapas.
 - 2026-10-27: reporte de fallos con Android vitals y registro local; Crashlytics más adelante.
+- 2026-10-27: applicationId `cc.juanma.mcm3d`.
+- 2026-10-27: objetivos iniciales de consumo y rendimiento aprobados (punto 5); salida típica de 8 h con hasta 20 % en AR y 20 % en otras vistas en pantalla; se optimiza sobre la marcha.
