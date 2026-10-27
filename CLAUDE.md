@@ -83,7 +83,7 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro. Decide si hace falta ARCore.
 3. Cámara en vivo con un marcador fijo hacia un punto conocido (validar que orientación y proyección cuadran).
 4. Grabación de rutas en segundo plano e importación de GPX/KML/KMZ.
-5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación.
+5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación (elegir entre Terrarium y Copernicus comparándolos en la ruta de prueba).
 6. Vista AR: ruta por delante y recorrido hecho, fijos en el mundo, con ajuste a la ruta y aviso en bifurcaciones.
 7. Plan B: ARCore, solo si el diagnóstico lo justifica.
 8. Optimización de energía, memoria y rendimiento.
@@ -98,8 +98,8 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 ### Temas para la discusión (en este orden)
 
 1. Anclaje del camino al mundo real: GPS, sensores y ARCore. Cerrado, ver "Discusión de la idea".
-2. Mapas, rutas y datos offline: fuentes, importación, grabación, elevación, paquete de zona. En curso.
-3. Interfaz y experiencia de uso.
+2. Mapas, rutas y datos offline: fuentes, importación, grabación, elevación, paquete de zona. Cerrado.
+3. Interfaz y experiencia de uso. En curso.
 4. Stack técnico (incluye el motor de render: OpenGL ES, Vulkan, Filament/SceneView o Canvas 2D).
 5. Optimización de CPU, memoria y batería (cámara + GPS + render).
 
@@ -126,7 +126,7 @@ Conclusiones:
 - Representación: cinta ancha y semitransparente, marcadores altos en giros y bifurcaciones, ruta por delante y recorrido hecho con colores distintos, más difusa cuando hay más incertidumbre.
 - No viable: precisión de centímetros sin conexión, interiores, rumbo exacto desde el primer segundo estando quieto.
 
-### 2. Mapas, rutas y datos offline (en curso desde el 2026-10-27)
+### 2. Mapas, rutas y datos offline (cerrado el 2026-10-27)
 
 Respuestas del usuario:
 
@@ -158,9 +158,33 @@ Conclusiones:
 - Cálculo de rutas A→B (A* con penalización por pendiente sobre el grafo de senderos): mejora futura.
 - Mejora futura: aprender la altura real de una ruta con el barómetro al recorrerla y guardarla para la siguiente vez.
 
-Pregunta abierta:
+Aprobado por el usuario: descarga automática de zona alrededor de cada ruta y estrategia de alturas. Principio: los datos deben ser lo más precisos posible en las tres dimensiones. Implicaciones:
 
-- ¿Se aprueban la descarga automática de zona alrededor de cada ruta y la estrategia de alturas?
+- Comparar Terrarium contra Copernicus DEM en la ruta de prueba y quedarse con el más preciso.
+- Grabar la altura del barómetro desde la primera versión de la grabación, y preferir la altura grabada sobre la del modelo cuando exista.
+- Ajustar a OSM las rutas grabadas por otros para corregir su error horizontal.
+
+### 3. Interfaz y experiencia de uso (en curso desde el 2026-10-27)
+
+Propuesta inicial:
+
+- Condicionantes: sol directo (alto contraste, textos grandes, colores que resalten sobre vegetación, tierra y cielo: magenta, naranja o cian, nunca verde), una mano y a veces pantalla mojada (botones grandes, pocos toques), batería para 4 a 8 h (AR a ratos, el resto en el bolsillo), sin cobertura.
+- Concepto de "salida": siempre graba el recorrido; puede seguir una ruta o no seguir ninguna (grabar una nueva). Grabar y navegar son lo mismo.
+- Pantallas: Mis rutas (lista, importar, estado del paquete offline), Detalle de ruta (perfil de altura, vista 2D, puntos de referencia, iniciar), Navegación, Resumen al terminar (guardar, exportar GPX), Ajustes y diagnóstico.
+- Navegación: celular levantado = vista AR; celular plano = mapa 2D desde arriba. Cambio automático por la orientación; la cámara solo se enciende en AR.
+- Vista AR: cinta de la ruta por delante (color fuerte, flechas de sentido), cinta del recorrido hecho (tenue), bifurcaciones con marcador alto y ramas incorrectas grises y tachadas, puntos de referencia como pines con nombre y distancia, franja de rumbo arriba, flecha en el borde cuando la ruta queda fuera de cuadro, indicador de precisión (la cinta se ensancha si hay duda), resumen de lo que falta abajo.
+- Mapa 2D sin mapa base de calles: ruta, senderos de la zona y relieve calculado del modelo de elevación ya descargado.
+- Modo bolsillo: pantalla apagada grabando; avisos por vibración y sonido opcional al acercarse a una bifurcación, al salirse de la ruta y al llegar a un punto de referencia; notificación con la siguiente indicación; estimación de si alcanza la batería.
+- Correcciones: arrastre horizontal en AR para girar el camino, arrastre vertical para subirlo o bajarlo, doble toque para restablecer; aviso de calibración de brújula (movimiento en 8).
+- Seguridad: "volver por donde vine" y coordenadas y altura visibles para emergencias.
+
+Preguntas abiertas:
+
+- ¿Cambio automático AR / mapa 2D según la inclinación?
+- Mapa 2D: ¿basta con ruta, senderos y relieve, o hace falta mapa base con nombres de lugares, ríos y veredas?
+- ¿Uso personal o para otros caminantes (publicación en Play Store)?
+- Estilo visual (sobrio o tipo videojuego) y tema oscuro por defecto.
+- ¿Sirven los avisos por vibración en el bolsillo? ¿Otros avisos?
 
 ## Decisiones tomadas
 
@@ -173,3 +197,5 @@ Pregunta abierta:
 - 2026-10-27: rutas importadas de otras apps (Relive, Komoot, Wikiloc) y grabadas con la app.
 - 2026-10-27: la primera versión solo sigue rutas importadas o grabadas; el cálculo de rutas nuevas queda como mejora futura.
 - 2026-10-27: la app funciona en cualquier zona; Manizales es la zona principal de pruebas.
+- 2026-10-27: al importar una ruta se descarga automáticamente su zona (senderos y elevación); antes de grabar una ruta nueva, los alrededores de la ubicación actual.
+- 2026-10-27: alturas recalculadas con modelo de elevación propio, suavizadas y, cuando existan, reemplazadas por las grabadas con barómetro. Principio: máxima precisión en las tres dimensiones.
