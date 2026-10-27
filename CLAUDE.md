@@ -47,7 +47,17 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 - Android SDK en `%LOCALAPPDATA%\Android\Sdk` (variable de usuario `ANDROID_HOME`): cmdline-tools 23.0, platform-tools 37.0.1 (adb), `platforms/android-36` y `build-tools/36.1.0`, con licencias aceptadas. `platform-tools` y `cmdline-tools\latest\bin` están en el PATH de usuario.
 - `sdkmanager` está deprecado desde cmdline-tools 23: el reemplazo es `android sdk` (binario `android.exe` en la misma carpeta). Además lista e instala los paquetes con `/` (`platforms/android-36`) en lugar de `;`.
 - Las terminales abiertas antes de la instalación (incluido VS Code) no ven las variables nuevas hasta reiniciarlas; mientras tanto Claude usa rutas absolutas.
-- Celular de pruebas: Samsung Galaxy S23 Ultra con Android 16. El "Bloqueador automático" de Samsung impide la depuración USB e inalámbrica: hay que desactivarlo mientras se desarrolla.
+- Las terminales abiertas antes de la instalación tampoco ven `adb` en el PATH; Claude lo llama por su ruta completa.
+
+## Celular de pruebas (leído con adb el 2026-10-27)
+
+- Samsung Galaxy S23 Ultra (SM-S918B), Android 16 (API 36), One UI 8.5, Snapdragon 8 Gen 2 (SM8550).
+- El "Bloqueador automático" de Samsung impide la depuración USB e inalámbrica: debe estar desactivado mientras se desarrolla.
+- Sensores físicos: acelerómetro y giroscopio LSM6DSO (STMicro), magnetómetro AK09918 (AKM), barómetro LPS22HH (STMicro).
+- Sensores fusionados (QTI): Rotation Vector, Game Rotation Vector, gravity, linear acceleration; además detector y contador de pasos (Samsung) y versiones sin calibrar de acelerómetro, giroscopio y magnetómetro.
+- GNSS: Qualcomm GNSS Gen9, doble frecuencia L1 + L5 (usa L5 en el fix). Capacidades: MEASUREMENTS (mediciones crudas), SATELLITE_PVT, MEASUREMENT_CORRECTIONS (LOS_SATS, EXCESS_PATH_LENGTH, REFLECTING_PLANE), ACCUMULATED_DELTA_RANGE (estado desconocido).
+- ARCore (Google Play Services for AR) instalado, versión 1.57.
+- Conexión adb: vinculado por depuración inalámbrica (`adb-R5CX60MG4SM`). El PC (`192.168.0.x`, red DESIGNIO2) y el celular (`192.168.1.x`) están en subredes distintas: TCP funciona, pero mDNS no cruza subredes, así que `adb` no descubre solo el puerto de conexión (cambia cada vez que se activa la depuración inalámbrica). Mientras no estén en la misma red, el usuario dicta el puerto o se usa `tools/connect-phone.ps1`.
 
 ## Estado
 
@@ -56,10 +66,10 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 - 2026-10-27: creación de `CLAUDE.md`, `.gitignore` y `docs/flujo-de-trabajo.md`; repositorio conectado a GitHub.
 - 2026-10-27: entorno de compilación listo: JDK 17, Android SDK (API 36) y adb, sin Android Studio.
 - 2026-10-27: depuración USB e inalámbrica activadas en el S23 Ultra (Bloqueador automático desactivado).
+- 2026-10-27: S23 Ultra vinculado y conectado por depuración inalámbrica; perfil de hardware leído con adb.
 
 ### En curso
 
-- Conectar el S23 Ultra con `adb` por depuración inalámbrica. Ya está vinculado (`adb-R5CX60MG4SM`), pero el PC (`192.168.0.x`, red DESIGNIO2) y el celular (`192.168.1.x`) están en subredes distintas: la conexión TCP funciona, pero mDNS no cruza subredes, así que `adb` no descubre solo el puerto de conexión, que cambia cada vez que se activa la depuración inalámbrica.
 - Siguiente paso: discusión de la idea (dificultades, alcance, interfaz, stack, optimización).
 
 ### Por implementar (borrador, se ajusta tras la discusión)
