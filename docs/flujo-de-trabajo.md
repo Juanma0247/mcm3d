@@ -93,12 +93,25 @@ El puerto de conexión cambia cada vez que se activa la depuración inalámbrica
 
 ## 6. Ciclo de cada cambio
 
-Claude ejecuta lo siguiente (se automatizará en un script `tools/deploy.ps1` cuando exista el proyecto):
+Desde la raíz del proyecto:
 
 ```powershell
-.\gradlew installDebug
-adb shell am start -n <paquete>/.MainActivity
-adb logcat
+.\tools\deploy.ps1           # compila, instala en el celular y abre la app
+.\tools\deploy.ps1 -Logcat   # además muestra los logs de la app
+.\tools\deploy.ps1 -NoLaunch # solo compila e instala
+```
+
+El script verifica primero que haya un celular conectado. Los pasos equivalentes a mano son:
+
+```powershell
+.\gradlew.bat :app:installDebug
+adb shell am start -n cc.juanma.mcm3d/.MainActivity
+```
+
+Para compilar y probar sin celular:
+
+```powershell
+.\gradlew.bat :core:test :app:assembleDebug
 ```
 
 Captura de la pantalla del celular, que Claude puede ver directamente:

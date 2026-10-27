@@ -17,7 +17,23 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 | `docs/flujo-de-trabajo.md` | Guía para preparar el PC, conectar el celular (USB o Wi-Fi) y el ciclo editar, compilar, probar. |
 | `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Es un respaldo para cuando el celular está en otra subred. Sin probar: el sistema de permisos bloqueó su ejecución. |
 | `tools/gpx_check.py` | Analiza un GPX: cobertura de OpenStreetMap a lo largo de la ruta (Overpass API) y alturas frente a Terrain Tiles (Terrarium). Uso: `python -I tools/gpx_check.py <ruta.gpx> cache/<nombre>`. Las descargas quedan en `cache/` (ignorada por git, igual que los `.gpx`, `.kml` y `.kmz`). |
-| `app/` | (Pendiente) módulo Android en Kotlin. |
+| `app/` | Módulo Android (`cc.juanma.mcm3d`): `sensing/` (monitores de GNSS, orientación, ambiente y energía en un hilo propio), `diagnostics/` (ViewModel y pantalla de diagnóstico), `ui/` (tema y componentes). Código Kotlin en `src/main/java`. |
+| `core/` | Módulo Kotlin puro, sin Android: ángulos, orientación de la cámara desde la matriz de rotación, altitud barométrica, bandas GNSS, medidores de frecuencia y promedios, cálculo de consumo. Pruebas JUnit en `src/test`. |
+| `gradle/`, `gradlew`, `gradlew.bat` | Wrapper de Gradle (checksum fijado) y catálogo de versiones `gradle/libs.versions.toml`. |
+| `tools/deploy.ps1` | Compila, instala en el celular y abre la app (`-Logcat` para ver logs, `-NoLaunch` para solo instalar). |
+
+## Proyecto Android
+
+- applicationId y namespace: `cc.juanma.mcm3d`. Versión actual: 0.1.0 (versionCode 1).
+- Gradle 9.8.2 (wrapper), AGP 9.4.1 con Kotlin integrado (sin plugin `kotlin-android`), Kotlin 2.4.21, Compose BOM 2026.09.00, Material 3. `:core` usa el plugin `kotlin-jvm`.
+- minSdk 26, compileSdk 37 (las librerías AndroidX actuales lo exigen; AGP descargó la plataforma 37), targetSdk 36 (Android 16, el del S23 Ultra), Java/JVM 17. Release con R8 y reducción de recursos.
+- Compilar y probar sin celular: `.\gradlew.bat :core:test :app:assembleDebug` (requiere `JAVA_HOME` al JDK 17; en terminales viejas, tomarlo de la variable de sistema).
+- Textos de la interfaz en español en `res/values/strings.xml` (idioma por defecto); el inglés irá en `values-en` más adelante.
+- Tema: solo oscuro por ahora, paleta en `ui/theme/Color.kt` (acento ámbar `#FF9A2E`, rojo solo para alertas).
+- Ícono adaptativo vectorial con capa monocromática (`res/drawable/ic_launcher_*.xml`).
+- Respaldo: `allowBackup` y `fullBackupContent` desactivados, y `res/xml/data_extraction_rules.xml` excluye todo de la nube y de la transferencia entre dispositivos (los datos tendrán ubicaciones reales). Revisar cuando existan rutas guardadas que el usuario quiera migrar.
+- Antes de publicar: subir targetSdk a 37 (lint `OldTargetApi`, única advertencia actual) y probar en Android 17.
+- Al actualizar versiones, consultar los metadatos de Maven (Google y Central) y la tabla de compatibilidad de AGP.
 
 ## Idea general
 
@@ -74,16 +90,18 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - 2026-10-27: depuración USB e inalámbrica activadas en el S23 Ultra (Bloqueador automático desactivado).
 - 2026-10-27: S23 Ultra vinculado y conectado por depuración inalámbrica; perfil de hardware leído con adb.
 - 2026-10-27: discusión de la idea completa (5 temas cerrados, ver "Discusión de la idea"). Ruta de prueba validada contra OSM y elevación.
+- 2026-10-27: v0.1.0 (hito 1): proyecto Android con `:app` y `:core`, pantalla de diagnóstico en vivo (GNSS con altitud sobre el nivel del mar, satélites, segunda frecuencia y constelaciones; rumbo verdadero de la cámara con declinación, precisión, brújula frente a giroscopio y frente a rumbo de avance, anomalía magnética; barómetro con altura relativa; luz; energía con corriente, %/h, temperatura y estado térmico; inventario y frecuencia de sensores) y `tools/deploy.ps1`. Compila en debug y release, 22 pruebas de `:core` pasan, lint sin errores. APK release: 0,99 MB. No se probó en el celular por decisión del usuario.
 
 ### En curso
 
-- Próxima sesión: empezar el desarrollo con el hito 1 (esqueleto del proyecto `cc.juanma.mcm3d`, script de despliegue al celular y pantalla de diagnóstico). El usuario pidió no empezar el desarrollo el 2026-10-27.
+- Probar la v0.1.0 en el S23 Ultra con `.\tools\deploy.ps1` cuando el usuario lo indique, y anotar los errores reales medidos (GPS, brújula, barómetro, consumo).
+- Siguiente hito: grabación de sesiones (GNSS + sensores) a archivo para reproducirlas en el PC y ajustar los algoritmos.
 - Pendiente: leer las capacidades de vibración del S23 Ultra (`adb shell dumpsys vibrator_manager`: control de amplitud y primitivas hápticas). No se pudo porque la depuración inalámbrica se había apagado.
 
 ### Por implementar (borrador, se ajusta tras la discusión)
 
-1. Esqueleto del proyecto (Kotlin, Gradle, script de despliegue al celular).
-2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro y consumo de corriente. Decide si hace falta ARCore.
+1. Esqueleto del proyecto (Kotlin, Gradle, script de despliegue al celular). Hecho en v0.1.0.
+2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro y consumo de corriente. Decide si hace falta ARCore. Diagnóstico en vivo hecho en v0.1.0; falta la grabación de sesiones.
 3. Cámara en vivo con un marcador fijo hacia un punto conocido (validar que orientación y proyección cuadran).
 4. Grabación de rutas en segundo plano e importación de GPX/KML/KMZ.
 5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación (elegir entre Terrarium y Copernicus comparándolos en la ruta de prueba).

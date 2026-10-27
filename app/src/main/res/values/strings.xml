@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">MCM3D</string>
+  <string name="diagnostics_title">Diagnóstico</string>
+  <string name="version_label">Versión %1$s</string>
+  <string name="not_available">n/d</string>
+
+  <string name="permission_title">Ubicación</string>
+  <string name="permission_body">Para medir el GPS, MCM3D necesita acceso a tu ubicación precisa. La orientación, la presión y la energía se miden sin este permiso.</string>
+  <string name="permission_button">Permitir ubicación</string>
+  <string name="permission_settings_button">Abrir ajustes de la app</string>
+
+  <string name="section_gnss">GNSS</string>
+  <string name="gnss_status_no_permission">Sin permiso</string>
+  <string name="gnss_status_disabled">Ubicación desactivada</string>
+  <string name="gnss_status_searching">Buscando señal</string>
+  <string name="gnss_status_fix">Con posición</string>
+  <string name="gnss_latitude">Latitud</string>
+  <string name="gnss_longitude">Longitud</string>
+  <string name="gnss_horizontal_accuracy">Precisión horizontal</string>
+  <string name="gnss_altitude_msl">Altitud sobre el nivel del mar</string>
+  <string name="gnss_altitude_ellipsoid">Altitud elipsoidal</string>
+  <string name="gnss_vertical_accuracy">Precisión vertical</string>
+  <string name="gnss_speed">Velocidad</string>
+  <string name="gnss_course">Rumbo de avance</string>
+  <string name="gnss_fix_age">Última posición</string>
+  <string name="gnss_fix_age_value">hace %1$s s</string>
+  <string name="gnss_satellites">Satélites usados / visibles</string>
+  <string name="gnss_second_frequency">Señales en segunda frecuencia</string>
+  <string name="gnss_second_frequency_hint">L5 / E5a: mejora la precisión entre montañas y árboles</string>
+  <string name="gnss_signal">Intensidad de señal</string>
+  <string name="gnss_signal_hint">Promedio de las 4 mejores señales en uso</string>
+  <string name="gnss_constellations">Constelaciones en uso</string>
+
+  <string name="section_orientation">Orientación</string>
+  <string name="orientation_status_missing">Sin sensor</string>
+  <string name="orientation_status_waiting">Esperando datos</string>
+  <string name="orientation_status_calibrate">Calibrar brújula</string>
+  <string name="orientation_status_interference">Interferencia magnética</string>
+  <string name="orientation_status_ok">Campo normal</string>
+  <string name="orientation_true_heading">Rumbo verdadero</string>
+  <string name="orientation_axis_camera">Eje de la cámara</string>
+  <string name="orientation_axis_top">Borde superior (celular plano)</string>
+  <string name="orientation_magnetic_heading">Rumbo magnético</string>
+  <string name="orientation_heading_accuracy">Precisión estimada del rumbo</string>
+  <string name="orientation_declination">Declinación magnética</string>
+  <string name="orientation_elevation">Inclinación de la cámara</string>
+  <string name="orientation_roll">Giro lateral</string>
+  <string name="orientation_compass_minus_gyro">Brújula menos giroscopio</string>
+  <string name="orientation_compass_minus_gyro_hint">Si cambia mucho estando quieto, hay deriva o interferencia</string>
+  <string name="orientation_compass_vs_course">Brújula frente a rumbo de avance</string>
+  <string name="orientation_compass_vs_course_hint">Camina con la cámara apuntando al frente</string>
+  <string name="orientation_field">Campo magnético medido / esperado</string>
+  <string name="orientation_compass_accuracy">Calibración de la brújula</string>
+  <string name="orientation_calibrate_hint">Mueve el celular trazando un 8 en el aire para calibrar la brújula.</string>
+  <string name="accuracy_high">Alta</string>
+  <string name="accuracy_medium">Media</string>
+  <string name="accuracy_low">Baja</string>
+  <string name="accuracy_unreliable">No fiable</string>
+  <string name="accuracy_unknown">Sin datos</string>
+
+  <string name="section_environment">Ambiente</string>
+  <string name="environment_pressure">Presión</string>
+  <string name="environment_relative_altitude">Altura relativa</string>
+  <string name="environment_relative_altitude_hint">Cambio de altura desde el inicio o el último reinicio</string>
+  <string name="environment_pressure_altitude">Altitud barométrica estándar</string>
+  <string name="environment_light">Luz ambiente</string>
+  <string name="environment_reset">Reiniciar altura relativa</string>
+  <string name="environment_no_barometer">Este dispositivo no tiene barómetro.</string>
+
+  <string name="section_power">Energía</string>
+  <string name="power_status_charging">Cargando</string>
+  <string name="power_status_discharging">Descargando</string>
+  <string name="power_status_full">Batería llena</string>
+  <string name="power_status_unknown">Estado desconocido</string>
+  <string name="power_level">Nivel de batería</string>
+  <string name="power_current">Corriente</string>
+  <string name="power_average_drain">Consumo medio (30 s)</string>
+  <string name="power_power">Potencia</string>
+  <string name="power_drain_rate">Consumo por hora</string>
+  <string name="power_capacity">Capacidad estimada</string>
+  <string name="power_voltage">Voltaje</string>
+  <string name="power_temperature">Temperatura de la batería</string>
+  <string name="power_thermal">Estado térmico</string>
+  <string name="power_charging_hint">Desconecta el cargador para medir el consumo.</string>
+  <string name="thermal_none">Normal</string>
+  <string name="thermal_light">Leve</string>
+  <string name="thermal_moderate">Moderado</string>
+  <string name="thermal_severe">Severo</string>
+  <string name="thermal_critical">Crítico</string>
+  <string name="thermal_emergency">Emergencia</string>
+  <string name="thermal_shutdown">Apagado inminente</string>
+
+  <string name="section_sensors">Sensores del dispositivo</string>
+  <string name="sensor_accelerometer">Acelerómetro</string>
+  <string name="sensor_gyroscope">Giroscopio</string>
+  <string name="sensor_magnetometer">Magnetómetro</string>
+  <string name="sensor_barometer">Barómetro</string>
+  <string name="sensor_rotation_vector">Orientación con brújula</string>
+  <string name="sensor_game_rotation_vector">Orientación sin brújula</string>
+  <string name="sensor_light">Sensor de luz</string>
+  <string name="sensor_step_detector">Detector de pasos</string>
+  <string name="sensor_missing">No disponible</string>
+  <string name="sensor_available">Disponible</string>
+  <string name="sensor_rate_measured">%1$s Hz (máx. %2$s Hz)</string>
+  <string name="sensor_rate_max">máx. %1$s Hz</string>
+</resources>
