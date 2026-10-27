@@ -41,7 +41,7 @@ function Find-OpenPorts([string]$HostAddress) {
   return $open
 }
 
-$connected = (Invoke-Adb 'devices') -split "`n" | Where-Object { $_ -match '^\S+:\d+\s+device$' }
+$connected = (Invoke-Adb 'devices') -split "`n" | Where-Object { $_ -match '^\S+\s+device$' }
 if ($connected) {
   Write-Host "Already connected: $(($connected -split '\s+')[0])"
   exit 0

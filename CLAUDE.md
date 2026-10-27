@@ -15,7 +15,7 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 |---|---|
 | `CLAUDE.md` | Este archivo: idea general, estado, decisiones, ideas y backlog. |
 | `docs/flujo-de-trabajo.md` | Guía para preparar el PC, conectar el celular (USB o Wi-Fi) y el ciclo editar, compilar, probar. |
-| `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Sin probar: el sistema de permisos bloqueó su ejecución. |
+| `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Es un respaldo para cuando el celular está en otra subred. Sin probar: el sistema de permisos bloqueó su ejecución. |
 | `app/` | (Pendiente) módulo Android en Kotlin. |
 
 ## Idea general
@@ -57,7 +57,9 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 - Sensores fusionados (QTI): Rotation Vector, Game Rotation Vector, gravity, linear acceleration; además detector y contador de pasos (Samsung) y versiones sin calibrar de acelerómetro, giroscopio y magnetómetro.
 - GNSS: Qualcomm GNSS Gen9, doble frecuencia L1 + L5 (usa L5 en el fix). Capacidades: MEASUREMENTS (mediciones crudas), SATELLITE_PVT, MEASUREMENT_CORRECTIONS (LOS_SATS, EXCESS_PATH_LENGTH, REFLECTING_PLANE), ACCUMULATED_DELTA_RANGE (estado desconocido).
 - ARCore (Google Play Services for AR) instalado, versión 1.57.
-- Conexión adb: vinculado por depuración inalámbrica (`adb-R5CX60MG4SM`). El PC (`192.168.0.x`, red DESIGNIO2) y el celular (`192.168.1.x`) están en subredes distintas: TCP funciona, pero mDNS no cruza subredes, así que `adb` no descubre solo el puerto de conexión (cambia cada vez que se activa la depuración inalámbrica). Mientras no estén en la misma red, el usuario dicta el puerto o se usa `tools/connect-phone.ps1`.
+- Conexión adb: vinculado por depuración inalámbrica (`adb-R5CX60MG4SM`). PC y celular están en la misma red (DESIGNIO2, `192.168.0.x`), así que `adb` descubre el celular por mDNS y se conecta solo (serial `adb-R5CX60MG4SM-YcULU6._adb-tls-connect._tcp`), sin dictar puertos.
+- Si el celular queda en otra subred, mDNS deja de funcionar: hay que dictar el puerto de conexión o usar `tools/connect-phone.ps1`.
+- Si queda una sesión vieja `offline` que provoca "more than one device", se limpia con `adb kill-server` seguido de `adb start-server`.
 
 ## Estado
 

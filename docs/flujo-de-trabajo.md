@@ -83,6 +83,7 @@ El puerto de conexión cambia cada vez que se activa la depuración inalámbrica
 
 - Redes de universidad, de empresa o algunos routers aíslan los dispositivos entre sí y la vinculación falla. Solución: activar la "Zona con cobertura inalámbrica móvil" de Windows y conectar el celular a esa red, o usar USB.
 - Al cambiar de red, la depuración inalámbrica se apaga: reactivarla y repetir `adb connect`.
+- Si `adb` dice "more than one device/emulator" porque quedó una sesión vieja `offline`, ejecutar `adb kill-server` y luego `adb start-server`; con mDNS el celular se reconecta solo en unos segundos.
 
 ## 5. Conectar por USB
 
