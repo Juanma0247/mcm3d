@@ -42,8 +42,10 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 
 - git y GitHub CLI (`gh`) instalados, sesión iniciada como `Juanma0247`.
 - No hay Android Studio (decisión: trabajar sin IDE, ver "Decisiones tomadas").
-- Java previo: Java 8 (32 bits) de Oracle en el PATH. Para Android se instala Temurin JDK 17 con `winget` (en curso, espera aprobación de UAC).
-- Android SDK en `%LOCALAPPDATA%\Android\Sdk`: command-line tools 23.0 instaladas en `cmdline-tools\latest`. Faltan `platform-tools` (adb), plataforma y build-tools.
+- Temurin JDK 17.0.20 instalado con `winget` en `C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot`; el instalador fijó `JAVA_HOME` de sistema a esa ruta. El Java 8 de Oracle sigue en el PATH para otros usos.
+- Android SDK en `%LOCALAPPDATA%\Android\Sdk` (variable de usuario `ANDROID_HOME`): cmdline-tools 23.0, platform-tools 37.0.1 (adb), `platforms/android-36` y `build-tools/36.1.0`, con licencias aceptadas. `platform-tools` y `cmdline-tools\latest\bin` están en el PATH de usuario.
+- `sdkmanager` está deprecado desde cmdline-tools 23: el reemplazo es `android sdk` (binario `android.exe` en la misma carpeta). Además lista e instala los paquetes con `/` (`platforms/android-36`) en lugar de `;`.
+- Las terminales abiertas antes de la instalación (incluido VS Code) no ven las variables nuevas hasta reiniciarlas; mientras tanto Claude usa rutas absolutas.
 - Celular de pruebas: Samsung Galaxy S23 Ultra con Android 16. El "Bloqueador automático" de Samsung impide la depuración USB e inalámbrica: hay que desactivarlo mientras se desarrolla.
 
 ## Estado
@@ -51,11 +53,12 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 ### Hecho
 
 - 2026-10-27: creación de `CLAUDE.md`, `.gitignore` y `docs/flujo-de-trabajo.md`; repositorio conectado a GitHub.
-- 2026-10-27: Android command-line tools 23.0 instaladas (checksum verificado).
+- 2026-10-27: entorno de compilación listo: JDK 17, Android SDK (API 36) y adb, sin Android Studio.
+- 2026-10-27: depuración USB e inalámbrica activadas en el S23 Ultra (Bloqueador automático desactivado).
 
 ### En curso
 
-- Preparar el entorno de compilación y la conexión con el celular.
+- Vincular el S23 Ultra con `adb` por depuración inalámbrica.
 - Siguiente paso: discusión de la idea (dificultades, alcance, interfaz, stack, optimización).
 
 ### Por implementar (borrador, se ajusta tras la discusión)

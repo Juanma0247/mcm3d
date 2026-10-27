@@ -29,11 +29,15 @@ El emulador no tiene cámara real ni GPS, giroscopio o magnetómetro reales (se 
 
 ## 2. Preparar el PC
 
-Estado al 2026-10-27: no hay Android SDK ni Android Studio, y Java es la versión 8 (se necesita JDK 17 o superior).
+Se eligió la opción mínima, sin IDE, y quedó instalada el 2026-10-27:
 
-- **Opción A, Android Studio**: lo instalas y completas el asistente inicial (descarga el SDK). Trae su propio JDK y los profilers. Claude usa ese SDK y ese JDK desde la terminal.
-- **Opción B, mínima y sin IDE**: Claude instala por terminal JDK 17 (Temurin, con `winget`), las Android command-line tools, `platform-tools` (adb), la plataforma y las build-tools. Android Studio se puede agregar después si hace falta.
-- **Opcional**: [scrcpy](https://github.com/Genymobile/scrcpy) para ver y controlar la pantalla del celular desde el PC.
+- Temurin JDK 17 (con `winget`), con `JAVA_HOME` de sistema.
+- Android SDK en `%LOCALAPPDATA%\Android\Sdk` (`ANDROID_HOME`): command-line tools, `platform-tools` (adb), plataforma de Android 16 (API 36) y build-tools.
+- `adb` y `sdkmanager` en el PATH de usuario. Hay que reiniciar las terminales abiertas (o VS Code) para que los reconozcan.
+
+La otra opción era instalar Android Studio, que trae su propio SDK, JDK y los profilers. Se puede agregar más adelante y usará este mismo SDK.
+
+Opcional: [scrcpy](https://github.com/Genymobile/scrcpy) para ver y controlar la pantalla del celular desde el PC.
 
 ## 3. Preparar el celular (una sola vez)
 
