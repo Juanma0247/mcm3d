@@ -42,7 +42,7 @@ Estado al 2026-10-27: no hay Android SDK ni Android Studio, y Java es la versió
 3. En Android 11 o superior, activar también "Depuración inalámbrica".
 4. Casos especiales:
    - Xiaomi, Redmi, POCO: activar "Instalar vía USB" y "Depuración USB (ajustes de seguridad)" (piden cuenta Xiaomi y SIM).
-   - Samsung con One UI 6 o superior: si no deja instalar por cable, desactivar temporalmente "Bloqueador automático" (Auto Blocker).
+   - Samsung con One UI 6 o superior (incluye el S23 Ultra): si la depuración aparece como "bloqueada por Bloqueador automático", ir a Ajustes → Seguridad y privacidad → Bloqueador automático y desactivarlo (o buscar "Bloqueador automático" en el buscador de Ajustes). Debe quedar desactivado mientras se desarrolla; al reactivarlo se vuelve a bloquear la depuración.
 
 ## 4. Conectar por Wi-Fi (recomendado)
 
@@ -57,7 +57,7 @@ Requisitos: Android 11 o superior; PC y celular en la misma red Wi-Fi.
    adb pair 192.168.1.50:37123
    ```
 
-   Usar la IP y el puerto de vinculación que muestra el celular, y escribir el código cuando lo pida.
+   Usar la IP y el puerto de vinculación que muestra el celular, y escribir el código cuando lo pida. También se puede pasar el código directamente (`adb pair IP:puerto 123456`), así que basta con dictarle a Claude la IP, el puerto y el código sin cerrar el diálogo del celular.
 
 **Conectar (cada vez que se reactive la depuración inalámbrica)**
 

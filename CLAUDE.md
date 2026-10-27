@@ -41,16 +41,17 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 ## Entorno de este PC (revisado el 2026-10-27)
 
 - git y GitHub CLI (`gh`) instalados, sesión iniciada como `Juanma0247`.
-- **No** hay Android Studio ni Android SDK instalados.
-- Java disponible: solo Java 8 (32 bits). El Android Gradle Plugin actual necesita JDK 17 o superior.
-- Pendiente: decidir entre instalar Android Studio (trae SDK y JDK) o solo JDK 17 más las herramientas de línea de comandos del SDK.
-- Celular de pruebas: pendiente (modelo y versión de Android).
+- No hay Android Studio (decisión: trabajar sin IDE, ver "Decisiones tomadas").
+- Java previo: Java 8 (32 bits) de Oracle en el PATH. Para Android se instala Temurin JDK 17 con `winget` (en curso, espera aprobación de UAC).
+- Android SDK en `%LOCALAPPDATA%\Android\Sdk`: command-line tools 23.0 instaladas en `cmdline-tools\latest`. Faltan `platform-tools` (adb), plataforma y build-tools.
+- Celular de pruebas: Samsung Galaxy S23 Ultra con Android 16. El "Bloqueador automático" de Samsung impide la depuración USB e inalámbrica: hay que desactivarlo mientras se desarrolla.
 
 ## Estado
 
 ### Hecho
 
 - 2026-10-27: creación de `CLAUDE.md`, `.gitignore` y `docs/flujo-de-trabajo.md`; repositorio conectado a GitHub.
+- 2026-10-27: Android command-line tools 23.0 instaladas (checksum verificado).
 
 ### En curso
 
@@ -84,4 +85,5 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 
 ## Decisiones tomadas
 
-- (Ninguna todavía.)
+- 2026-10-27: entorno sin Android Studio (opción B). Claude instala Temurin JDK 17 con `winget` y el Android SDK por línea de comandos; Android Studio se puede agregar después para perfilar.
+- 2026-10-27: dispositivo de pruebas único: Samsung Galaxy S23 Ultra (Android 16). Sin emulador.
