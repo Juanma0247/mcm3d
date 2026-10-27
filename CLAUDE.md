@@ -63,6 +63,7 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - Conexión adb: vinculado por depuración inalámbrica (`adb-R5CX60MG4SM`). PC y celular están en la misma red (DESIGNIO2, `192.168.0.x`), así que `adb` descubre el celular por mDNS y se conecta solo (serial `adb-R5CX60MG4SM-YcULU6._adb-tls-connect._tcp`), sin dictar puertos.
 - Si el celular queda en otra subred, mDNS deja de funcionar: hay que dictar el puerto de conexión o usar `tools/connect-phone.ps1`.
 - Si queda una sesión vieja `offline` que provoca "more than one device", se limpia con `adb kill-server` seguido de `adb start-server`.
+- La depuración inalámbrica se apaga sola después de un rato (visto el 2026-10-27); al reactivarla en el celular, `adb` se reconecta solo por mDNS.
 
 ## Estado
 
@@ -94,13 +95,14 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - Capa de depuración en pantalla (precisión, rumbo, FPS, consumo) activable en builds de desarrollo.
 - Compilar el APK en GitHub Actions para instalarlo desde el celular sin estar en el PC.
 - "Volver por donde vine": guiar de regreso por el recorrido grabado, útil sin cobertura.
+- Avisos hápticos en un reloj inteligente (Wear OS), más fáciles de notar que en el bolsillo al caminar.
 
 ### Temas para la discusión (en este orden)
 
 1. Anclaje del camino al mundo real: GPS, sensores y ARCore. Cerrado, ver "Discusión de la idea".
 2. Mapas, rutas y datos offline: fuentes, importación, grabación, elevación, paquete de zona. Cerrado.
-3. Interfaz y experiencia de uso. En curso.
-4. Stack técnico (incluye el motor de render: OpenGL ES, Vulkan, Filament/SceneView o Canvas 2D).
+3. Interfaz y experiencia de uso. Cerrado.
+4. Stack técnico. En curso.
 5. Optimización de CPU, memoria y batería (cámara + GPS + render).
 
 ## Discusión de la idea
@@ -164,7 +166,7 @@ Aprobado por el usuario: descarga automática de zona alrededor de cada ruta y e
 - Grabar la altura del barómetro desde la primera versión de la grabación, y preferir la altura grabada sobre la del modelo cuando exista.
 - Ajustar a OSM las rutas grabadas por otros para corregir su error horizontal.
 
-### 3. Interfaz y experiencia de uso (en curso desde el 2026-10-27)
+### 3. Interfaz y experiencia de uso (cerrado el 2026-10-27)
 
 Propuesta inicial:
 
@@ -178,13 +180,44 @@ Propuesta inicial:
 - Correcciones: arrastre horizontal en AR para girar el camino, arrastre vertical para subirlo o bajarlo, doble toque para restablecer; aviso de calibración de brújula (movimiento en 8).
 - Seguridad: "volver por donde vine" y coordenadas y altura visibles para emergencias.
 
+Respuestas del usuario:
+
+- Cambio automático AR / mapa 2D según la inclinación: sí.
+- Nombres de lugares, veredas y puntos de referencia de la zona: sí. Ríos: no hacen falta.
+- La app se publicará en Play Store: alto nivel de acabado, diseño, usabilidad, adaptabilidad y eficiencia en otros dispositivos. Se parte del S23 Ultra y luego se adapta a gamas más bajas; el diseño UX/UI se pule desde ahora.
+- Estilo sobrio, técnico y profesional; tema oscuro por defecto para ahorrar batería, con alto contraste para pleno sol y sin confusiones.
+- Avisos por vibración: sí, con patrones según el tipo de aviso (una desviación se siente como alerta; una bifurcación a 50 m apenas se nota).
+
+Nombres de lugares en OpenStreetMap (zona 4.95..5.08 N, 75.55..75.38 O, consulta del 2026-10-27): 334 elementos con nombre. Veredas como `place=village/hamlet/locality` (Gallinazo, Alto Tablazo, Bajo Tablazo, La Aurora, El Arenillo...), 16 cerros (`natural=peak`: Alto Bonito, Cerro Sancancio, Cerro Tesorito...), miradores, atractivos, una cascada, un camping y una cueva. También barrios y comunas urbanas (se filtran fuera de la ciudad).
+
+Ajustes tras las respuestas:
+
+- Nombres: se descargan con el paquete de zona; en el mapa 2D como etiquetas y en AR como etiquetas discretas de cerros y veredas, pocas y priorizadas para no saturar.
+- Estilo: un solo color de acento fuerte para la ruta; rojo reservado para alertas; borde oscuro (halo) alrededor de todo trazo y texto claro en AR para que se lea sobre cielo brillante y sobre bosque oscuro; forma más color (sólido o punteado, iconos) para no depender solo del color (daltonismo); cifras con números tabulares; "modo sol" automático con el sensor de luz (trazos más gruesos, textos más grandes, contraste máximo).
+- Vibración: el ritmo indica el tipo de aviso y la intensidad indica la urgencia (en el bolsillo se distingue mejor el ritmo que la intensidad). Propuesta: bifurcación a 50 m, un toque muy suave; bifurcación inmediata, dos toques suaves; punto de referencia, dos toques medios espaciados; regreso a la ruta, un toque medio; desviación, tres pulsos fuertes repetidos cada ~10 s hasta volver o descartar; GPS perdido o batería baja, pulso largo más uno corto. Intensidad ajustable. Pendiente: leer en el S23 Ultra si soporta control de amplitud y primitivas hápticas; en celulares sin control de amplitud se usa solo el ritmo.
+- Play Store: detectar los sensores disponibles y degradar con elegancia (muchos gama media y baja no tienen giroscopio ni barómetro); grabar con servicio en primer plano iniciado por el usuario para no pedir permiso de ubicación en segundo plano; ARCore marcado como opcional; atribuciones obligatorias (© OpenStreetMap contributors, fuente de elevación); textos en recursos desde el inicio (español primero, inglés después); accesibilidad (escala de fuente, contraste, TalkBack fuera de la vista AR); la instancia pública de Overpass tiene límites de uso justo, así que a escala habrá que evaluar paquetes de zona preprocesados propios.
+
+### 4. Stack técnico (en curso desde el 2026-10-27)
+
+Propuesta inicial:
+
+- Kotlin, sin NDK al inicio. Módulos: `:core` (Kotlin puro: geometría, fusión de sensores, ajuste a la ruta, formatos) probado en el PC con sesiones grabadas, y `:app` (Android).
+- UI: Jetpack Compose + Material 3 con tema propio, Navigation Compose, ViewModel + StateFlow, corrutinas. Inyección de dependencias manual al inicio (compila más rápido que Hilt).
+- Render: un solo renderizador OpenGL ES 3.0 propio para AR y mapa 2D (misma escena, dos cámaras virtuales, transición animada al inclinar). La cámara entra como textura externa, sincronizada por marca de tiempo con la orientación. Descartados: Filament/SceneView (pesados, PBR innecesario), Vulkan (complejidad sin beneficio para esta escena), Canvas 2D (no sincroniza con los cuadros de la cámara), SDK de mapas como MapLibre o Google Maps (peso, dependencia, segundo renderizador).
+- Cámara: CameraX con Surface propia hacia OpenGL, estabilización desactivada, lente principal, 720p o 1080p a 30 fps.
+- Sensores: `SensorManager` directo (Game Rotation Vector, magnetómetro, barómetro, pasos) con batching por hardware en modo bolsillo.
+- Ubicación: `LocationManager` (GPS_PROVIDER) + `GnssStatus`: control total y sin depender de Google Play Services.
+- Datos: Room para rutas, salidas y metadatos; geometrías y paquetes de zona en formato binario propio con memoria mapeada (carga instantánea, poca RAM); DataStore para ajustes.
+- Descarga y procesamiento de zonas: OkHttp + WorkManager; lectura en streaming con `JsonReader` y `XmlPullParser` del sistema; teselas de elevación con `BitmapFactory`.
+- Build: Gradle Kotlin DSL + catálogo de versiones; minSdk 26, targetSdk 36; R8 y reducción de recursos; Baseline Profiles; publicación como AAB.
+- Plan B: ARCore usa el mismo renderizador OpenGL; opcional en el manifiesto.
+- Pruebas: JUnit en `:core` con sesiones grabadas (fuera del repo) y datos sintéticos (en el repo).
+
 Preguntas abiertas:
 
-- ¿Cambio automático AR / mapa 2D según la inclinación?
-- Mapa 2D: ¿basta con ruta, senderos y relieve, o hace falta mapa base con nombres de lugares, ríos y veredas?
-- ¿Uso personal o para otros caminantes (publicación en Play Store)?
-- Estilo visual (sobrio o tipo videojuego) y tema oscuro por defecto.
-- ¿Sirven los avisos por vibración en el bolsillo? ¿Otros avisos?
+- ¿Mapa 2D propio en OpenGL en lugar de un SDK de mapas?
+- applicationId definitivo (no se puede cambiar después de publicar) y nombre de la app.
+- ¿Reporte de fallos (por ejemplo Firebase Crashlytics) desde el inicio o más adelante?
 
 ## Decisiones tomadas
 
@@ -199,3 +232,8 @@ Preguntas abiertas:
 - 2026-10-27: la app funciona en cualquier zona; Manizales es la zona principal de pruebas.
 - 2026-10-27: al importar una ruta se descarga automáticamente su zona (senderos y elevación); antes de grabar una ruta nueva, los alrededores de la ubicación actual.
 - 2026-10-27: alturas recalculadas con modelo de elevación propio, suavizadas y, cuando existan, reemplazadas por las grabadas con barómetro. Principio: máxima precisión en las tres dimensiones.
+- 2026-10-27: cambio automático entre vista AR y mapa 2D según la inclinación del celular.
+- 2026-10-27: nombres de lugares, veredas y puntos de referencia de OSM en el mapa y en AR; sin ríos.
+- 2026-10-27: objetivo de publicación en Play Store; UX/UI pulida desde ahora; adaptación a gamas bajas después de validar en el S23 Ultra.
+- 2026-10-27: estilo sobrio, técnico y profesional; tema oscuro por defecto con alto contraste para pleno sol.
+- 2026-10-27: avisos hápticos diferenciados por tipo (ritmo) y urgencia (intensidad).
