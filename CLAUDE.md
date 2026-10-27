@@ -16,6 +16,7 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 | `CLAUDE.md` | Este archivo: idea general, estado, decisiones, ideas y backlog. |
 | `docs/flujo-de-trabajo.md` | Guía para preparar el PC, conectar el celular (USB o Wi-Fi) y el ciclo editar, compilar, probar. |
 | `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Es un respaldo para cuando el celular está en otra subred. Sin probar: el sistema de permisos bloqueó su ejecución. |
+| `tools/gpx_check.py` | Analiza un GPX: cobertura de OpenStreetMap a lo largo de la ruta (Overpass API) y alturas frente a Terrain Tiles (Terrarium). Uso: `python -I tools/gpx_check.py <ruta.gpx> cache/<nombre>`. Las descargas quedan en `cache/` (ignorada por git, igual que los `.gpx`, `.kml` y `.kmz`). |
 | `app/` | (Pendiente) módulo Android en Kotlin. |
 
 ## Idea general
@@ -127,22 +128,39 @@ Conclusiones:
 
 ### 2. Mapas, rutas y datos offline (en curso desde el 2026-10-27)
 
-Propuesta inicial:
+Respuestas del usuario:
 
-- Datos que deben estar en el celular antes de salir: la ruta a seguir, la red de senderos de la zona (OpenStreetMap) y un modelo de elevación (OSM no guarda alturas).
-- Importación por archivo GPX (y KML/KMZ) mediante "Compartir" o "Abrir con" y un selector de archivos. Relive, Komoot y Wikiloc no tienen API pública abierta para sincronizar.
-- Al importar, ajustar la ruta a los senderos de OSM donde coinciden y conservar la línea grabada donde OSM no tiene el sendero.
-- Grabación con servicio en primer plano, guardando puntos solo al moverse unos metros o cambiar de dirección, con altura del barómetro; exportación a GPX.
-- Elevación: Terrain Tiles de AWS (formato Terrarium, PNG que Android decodifica de forma nativa) o Copernicus DEM (GeoTIFF, mejor calidad, más complejo). Usar altura relativa al usuario, leída del mismo modelo, más el barómetro para seguir los cambios reales de altura.
-- Paquete de zona: con internet, el usuario elige la zona y la app descarga los senderos (Overpass API) y las teselas de elevación, los procesa una vez y los guarda en formato compacto. En el sendero solo se leen.
-- Rutas nuevas A→B: algoritmo propio (A* con penalización por pendiente) sobre el grafo de senderos de la zona, como fase posterior.
+- No hace falta calcular rutas nuevas: basta con seguir rutas importadas o grabadas. El cálculo de rutas queda como mejora futura, cuando haya datos y experiencia en ciertas zonas.
+- Las rutas las publican y usan los caminantes de Manizales (Relive, Komoot, Wikiloc); el usuario no usa esas apps, se guía por quienes conocen las rutas.
+- Zona: cualquiera; la principal es Manizales.
+- Ruta de prueba: `Downloads\Puente_Gallinazo_No__3___Recorrido_circular_desde_Aeropuerto_La_Nubia.gpx` (Komoot). No se sube al repositorio.
 
-Preguntas abiertas:
+Validación con la ruta de prueba (`tools/gpx_check.py`, 2026-10-27):
 
-- ¿Hace falta calcular rutas nuevas sobre los senderos o basta con seguir rutas importadas o grabadas?
-- ¿"Relieve" es Relive? ¿Cuál de las tres apps se usa más?
-- Conseguir un GPX real de un sendero conocido cerca de Manizales para pruebas.
-- ¿Zona fija (alrededores de Manizales) o descarga de cualquier zona elegida?
+- El GPX de Komoot es una ruta planificada: 1 track, 716 puntos, 2 waypoints (parqueadero y puente), 21,3 km, circular. Separación entre puntos: mediana 21 m, máximo 265 m.
+- Las horas son sintéticas (hora de descarga más la duración estimada de 6 h 28 min): no son una grabación real.
+- Las alturas de Komoot son inconsistentes: inicio y fin son el mismo punto, pero difieren 20 m (2033,6 y 2013,8 m).
+- OpenStreetMap cubre el 100 % de la ruta: distancia mediana 0,1 m, máxima 1,5 m. Komoot traza sobre OSM, así que sus rutas planificadas coinciden con OSM; las grabadas (Wikiloc, Relive) traerán el error del GPS de quien las grabó.
+- Tipo de vía: 15,5 km `unclassified` (vías rurales menores), 1,4 km `footway`, 1,2 km `cycleway`, 1,1 km `trunk`, 0,6 km `track`, 0,35 km `path` y tramos menores.
+- Elevación Terrarium z13 (píxel de 19 m a esta latitud): consistente consigo misma (inicio y fin 2031,7 m). Diferencia con Komoot: media −3 m, desviación 8 m, máximo 29 m. Desnivel: Komoot +679/−699 m; DEM +1123/−1124 m (el ruido del DEM infla el desnivel y Komoot suaviza mucho; el real debe estar entre ambos).
+- Pendientes en ventanas de 20 m: mediana 10 %, p90 24 %. Dibujar el camino plano no sirve: con 24 % de pendiente, 50 m adelante el camino está 12 m más arriba.
+- Tamaños para esta zona (unos 6 × 5 km): vías de OSM en JSON 836 KB (en binario compacto, un orden de magnitud menos); 4 teselas de elevación, 168 KB.
+
+Conclusiones:
+
+- Importación por archivo GPX (y KML/KMZ) con "Compartir", "Abrir con" y selector de archivos; Relive, Komoot y Wikiloc no tienen API pública abierta.
+- Al importar: ignorar las horas de rutas planificadas, recalcular todas las alturas con el modelo de elevación propio, densificar la ruta (un punto cada pocos metros) y suavizar el perfil de altura para evitar saltos y pendientes falsas.
+- Rutas grabadas por otros: ajustarlas a OSM donde coinciden y conservar la línea grabada donde OSM no tiene el sendero.
+- Los waypoints del GPX se muestran como marcadores AR (por ejemplo, el puente, visible desde lejos).
+- Grabación propia con servicio en primer plano, puntos solo al moverse unos metros o cambiar de dirección, altura del barómetro y exportación a GPX.
+- Elevación: Terrain Tiles de AWS (Terrarium), validadas con la ruta de prueba; Copernicus DEM como alternativa si hace falta más calidad. En la vista AR se usa la altura relativa al usuario (mismo modelo) y el barómetro para los cambios reales.
+- Paquete de zona: descarga automática de la zona alrededor de cada ruta importada (con margen) o alrededor de la ubicación actual antes de salir a grabar. Se procesa una vez y se guarda compacto; en el sendero solo se lee.
+- Cálculo de rutas A→B (A* con penalización por pendiente sobre el grafo de senderos): mejora futura.
+- Mejora futura: aprender la altura real de una ruta con el barómetro al recorrerla y guardarla para la siguiente vez.
+
+Pregunta abierta:
+
+- ¿Se aprueban la descarga automática de zona alrededor de cada ruta y la estrategia de alturas?
 
 ## Decisiones tomadas
 
@@ -153,3 +171,5 @@ Preguntas abiertas:
 - 2026-10-27: el camino queda fijo en el mundo y se revela al mover el celular, visible a través de obstáculos, sin oclusión.
 - 2026-10-27: precisión objetivo: guía de dirección, giros y bifurcaciones, mostrando el recorrido hecho y el que falta.
 - 2026-10-27: rutas importadas de otras apps (Relive, Komoot, Wikiloc) y grabadas con la app.
+- 2026-10-27: la primera versión solo sigue rutas importadas o grabadas; el cálculo de rutas nuevas queda como mejora futura.
+- 2026-10-27: la app funciona en cualquier zona; Manizales es la zona principal de pruebas.

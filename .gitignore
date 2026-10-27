@@ -24,6 +24,10 @@ desktop.ini
 *.dex
 
 tools/.last-phone
+cache/
+*.gpx
+*.kml
+*.kmz
 
 # Field recordings and device dumps contain real locations
 recordings/
