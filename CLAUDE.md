@@ -89,15 +89,37 @@ Prioridades: funcionar offline y lograr la máxima eficiencia en velocidad, proc
 - Capa de depuración en pantalla (precisión, rumbo, FPS, consumo) activable en builds de desarrollo.
 - Compilar el APK en GitHub Actions para instalarlo desde el celular sin estar en el PC.
 
-### Temas para la discusión
+### Temas para la discusión (en este orden)
 
-- Mapas y rutas offline: fuente de datos (OpenStreetMap), motor de rutas, formato de almacenamiento.
-- Precisión del GPS (varios metros) frente a un camino que debe verse "pegado" al suelo.
-- Orientación: fusión de sensores, interferencias magnéticas, calibración, deriva.
-- ARCore (seguimiento visual, Geospatial API) frente a una solución propia solo con sensores.
-- Motor de render: OpenGL ES, Vulkan, Filament/SceneView o Canvas 2D.
-- Interfaz y experiencia de uso.
-- Consumo de batería de cámara + GPS + render.
+1. Anclaje del camino al mundo real: GPS, sensores y ARCore. En curso, ver "Discusión de la idea".
+2. Mapas y rutas offline: fuente de datos (OpenStreetMap), motor de rutas, formato de almacenamiento.
+3. Interfaz y experiencia de uso.
+4. Stack técnico (incluye el motor de render: OpenGL ES, Vulkan, Filament/SceneView o Canvas 2D).
+5. Optimización de CPU, memoria y batería (cámara + GPS + render).
+
+## Discusión de la idea
+
+### 1. Anclaje del camino al mundo real (2026-10-27, en curso)
+
+Conclusiones provisionales:
+
+- El error de posición del GPS domina cerca (el tramo a los pies se ve corrido) y el error de rumbo domina lejos (todo el camino gira alrededor del usuario). Con 3 m de error lateral, un punto a 5 m se desvía unos 31°; con 10° de error de rumbo, un punto a 100 m queda corrido unos 17 m.
+- Solo con GPS + sensores se logra una guía de dirección (rumbo con ±10° o más, varios metros de desfase), no un camino pintado en la acera. Mitigaciones: ajustar al usuario sobre la ruta (map matching) para que el camino siempre salga de sus pies; corregir el sesgo de la brújula con el rumbo de avance del GPS y la dirección de la calle; usar Game Rotation Vector para la orientación de corto plazo; descartar lecturas magnéticas anómalas comparándolas con `GeomagneticField` (modelo WMM, offline); sincronizar la orientación con el instante de cada cuadro de la cámara; gesto de ajuste manual del rumbo.
+- ARCore (seguimiento visual-inercial) funciona sin internet, ya está instalado en el S23 Ultra, da una pose estable sincronizada con la cámara y detecta el suelo. No da posición ni rumbo absolutos: hay que alinearlo con el mundo ajustando su trayectoria a la del GPS mientras se camina, lo que estima el rumbo mucho mejor que la brújula.
+- Geospatial API de ARCore (VPS con Street View) da posición y rumbo precisos al instante, pero requiere internet y clave de Google Cloud: solo como mejora opcional en línea.
+- Construir un seguimiento visual propio (VIO) no vale la pena: es trabajo de investigación de años y ARCore lo resuelve.
+- La representación visual debe tolerar el error: cinta ancha y semitransparente, marcadores altos en los giros, camino visible a través de edificios ("radiografía", sin necesidad de oclusión ni profundidad), más difuso cuando la incertidumbre es alta.
+- No es viable: precisión de centímetros sin conexión, navegación en interiores sin infraestructura, rumbo exacto desde el primer segundo estando quieto, ni un camino exacto sobre la acera si el mapa solo tiene el eje de la vía.
+- Arquitectura propuesta en capas: (1) fusión propia GPS + sensores + map matching, siempre activa; (2) ARCore cuando la cámara está abierta y el seguimiento es bueno; (3) Geospatial opcional con internet.
+- Primer hito propuesto: pantalla de diagnóstico que mida los errores reales en el celular y grabe sesiones, para decidir con datos.
+
+Preguntas abiertas:
+
+- Escenario principal de uso: ciudad a pie, senderos y montaña, bicicleta o vehículo.
+- ¿Se acepta depender de ARCore (Google Play Services for AR)?
+- ¿"Radiografía" significa ver el camino a través de edificios y obstáculos?
+- Precisión visual esperada: ¿camino pintado en la acera o guía de dirección y giros?
+- ¿"Camino previamente trazado" es una ruta calculada de A a B, un recorrido grabado o dibujado por el usuario (GPX), o ambos?
 
 ## Decisiones tomadas
 
