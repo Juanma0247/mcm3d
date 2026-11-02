@@ -92,9 +92,12 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - 2026-10-27: discusión de la idea completa (5 temas cerrados, ver "Discusión de la idea"). Ruta de prueba validada contra OSM y elevación.
 - 2026-10-27: v0.1.0 (hito 1): proyecto Android con `:app` y `:core`, pantalla de diagnóstico en vivo (GNSS con altitud sobre el nivel del mar, satélites, segunda frecuencia y constelaciones; rumbo verdadero de la cámara con declinación, precisión, brújula frente a giroscopio y frente a rumbo de avance, anomalía magnética; barómetro con altura relativa; luz; energía con corriente, %/h, temperatura y estado térmico; inventario y frecuencia de sensores) y `tools/deploy.ps1`. Compila en debug y release, 22 pruebas de `:core` pasan, lint sin errores. APK release: 0,99 MB. No se probó en el celular por decisión del usuario.
 
+- 2026-11-02: primera prueba de la v0.1.0 en el S23 Ultra, bajo techo y quieto (24 lx): arranca sin fallos y pide el permiso de ubicación. GNSS: ±10,2 m horizontal, ±2,8 m vertical, 20/29 satélites (Galileo 7, GPS 6, BeiDou 5, GLONASS 2), 2 señales L5/E5a, 30,8 dB-Hz. Altitud GNSS 2073,7 m frente a 2003 m barométrica estándar (diferencia esperada: la estándar no corrige por clima). Orientación: interferencia magnética (22,8 µT medidos frente a 30,2 esperados), declinación −7,8°, "precisión estimada del rumbo" en n/d (el Rotation Vector de QTI no parece reportarla). Energía con pantalla encendida y sin cámara: ~305 mA, 6,5 a 6,9 %/h, 27 °C, estado térmico normal. Rotation Vector y Game Rotation Vector a 52 Hz, magnetómetro 50 Hz, barómetro 5 Hz.
+
 ### En curso
 
-- Probar la v0.1.0 en el S23 Ultra con `.\tools\deploy.ps1` cuando el usuario lo indique, y anotar los errores reales medidos (GPS, brújula, barómetro, consumo).
+- Completar la prueba de la v0.1.0 a cielo abierto: precisión GNSS sin techo, rumbo frente a un norte conocido, brújula frente a rumbo de avance caminando, barómetro subiendo un piso.
+- Revisar por qué la precisión del rumbo sale n/d (¿leer `values[4]` o usar `onAccuracyChanged` del magnetómetro?).
 - Siguiente hito: grabación de sesiones (GNSS + sensores) a archivo para reproducirlas en el PC y ajustar los algoritmos.
 - Pendiente: leer las capacidades de vibración del S23 Ultra (`adb shell dumpsys vibrator_manager`: control de amplitud y primitivas hápticas). No se pudo porque la depuración inalámbrica se había apagado.
 
