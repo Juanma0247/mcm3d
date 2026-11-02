@@ -10,6 +10,25 @@
   <string name="permission_button">Permitir ubicación</string>
   <string name="permission_settings_button">Abrir ajustes de la app</string>
 
+  <string name="section_recording">Prueba de campo</string>
+  <string name="recording_idle">Detenida</string>
+  <string name="recording_moving_badge">Grabando</string>
+  <string name="recording_still_badge">Grabando, en pausa</string>
+  <string name="recording_start">Iniciar prueba</string>
+  <string name="recording_stop">Detener prueba</string>
+  <string name="recording_mark">Marcar punto</string>
+  <string name="recording_hint">Graba GPS, satélites, orientación, presión, pasos y batería, también con la pantalla apagada. Solo guarda datos nuevos: si pasas más de 3 minutos sin desplazarte, apaga el GPS y los sensores hasta que vuelvas a caminar.</string>
+  <string name="recording_duration">Duración</string>
+  <string name="recording_mode">Estado</string>
+  <string name="recording_mode_moving">En movimiento: GPS y sensores activos</string>
+  <string name="recording_mode_still">Quieto: GPS en pausa para ahorrar batería</string>
+  <string name="recording_still_time">Tiempo en pausa</string>
+  <string name="recording_fixes">Posiciones guardadas</string>
+  <string name="recording_lines">Registros / tamaño</string>
+  <string name="recording_marks">Puntos marcados</string>
+  <string name="recording_channel">Grabación de pruebas</string>
+  <string name="recording_notification_title">MCM3D está grabando la prueba</string>
+
   <string name="section_gnss">GNSS</string>
   <string name="gnss_status_no_permission">Sin permiso</string>
   <string name="gnss_status_disabled">Ubicación desactivada</string>

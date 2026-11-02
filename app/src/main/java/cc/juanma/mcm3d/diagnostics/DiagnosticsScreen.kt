@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,6 +36,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cc.juanma.mcm3d.BuildConfig
 import cc.juanma.mcm3d.R
+import cc.juanma.mcm3d.recording.RecordingService
+import cc.juanma.mcm3d.recording.RecordingStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +51,11 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = viewModel()) {
     permissionDenied = result[Manifest.permission.ACCESS_FINE_LOCATION] != true
     viewModel.onLocationPermissionChanged()
   }
+
+  val recording by RecordingStatus.state.collectAsStateWithLifecycle()
+  val recordingPermissionLauncher = rememberLauncherForActivityResult(
+    ActivityResultContracts.RequestMultiplePermissions(),
+  ) { RecordingService.start(context) }
 
   LifecycleStartEffect(viewModel) {
     viewModel.start()
@@ -96,6 +104,16 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = viewModel()) {
           )
         }
       }
+      if (state.locationPermission) {
+        item(key = "recording") {
+          RecordingSection(
+            recording = recording,
+            onStart = { recordingPermissionLauncher.launch(recordingPermissions()) },
+            onMark = { RecordingService.mark(context) },
+            onStop = { RecordingService.stop(context) },
+          )
+        }
+      }
       item(key = "gnss") { GnssSection(state.gnss, state.locationPermission) }
       item(key = "orientation") { OrientationSection(state.orientation, state.heading) }
       item(key = "environment") { EnvironmentSection(state.environment, viewModel::resetRelativeAltitude) }
@@ -113,6 +131,11 @@ private fun KeepScreenOn() {
     onDispose { view.keepScreenOn = false }
   }
 }
+
+private fun recordingPermissions(): Array<String> = buildList {
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) add(Manifest.permission.ACTIVITY_RECOGNITION)
+}.toTypedArray()
 
 private fun appSettingsIntent(context: Context): Intent =
   Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))

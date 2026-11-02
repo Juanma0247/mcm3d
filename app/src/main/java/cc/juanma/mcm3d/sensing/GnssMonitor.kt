@@ -61,7 +61,11 @@ data class GnssSnapshot(
   }
 }
 
-class GnssMonitor(private val context: Context) {
+class GnssMonitor(
+  private val context: Context,
+  private val onFix: ((Location) -> Unit)? = null,
+  private val onSatellites: ((GnssStatus) -> Unit)? = null,
+) {
   private val locationManager = context.getSystemService(LocationManager::class.java)
   private val lock = Any()
   private var running = false
@@ -156,6 +160,7 @@ class GnssMonitor(private val context: Context) {
   private fun onLocation(newLocation: Location) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) addMslAltitude(newLocation)
     synchronized(lock) { location = newLocation }
+    onFix?.invoke(newLocation)
   }
 
   @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -214,6 +219,7 @@ class GnssMonitor(private val context: Context) {
       topCn0Mean = cn0Mean
       scratchConstellation.copyInto(usedByConstellation)
     }
+    onSatellites?.invoke(status)
   }
 
   private fun insertTopCn0(value: Double) {

@@ -17,14 +17,16 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 | `docs/flujo-de-trabajo.md` | Guía para preparar el PC, conectar el celular (USB o Wi-Fi) y el ciclo editar, compilar, probar. |
 | `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Es un respaldo para cuando el celular está en otra subred. Sin probar: el sistema de permisos bloqueó su ejecución. |
 | `tools/gpx_check.py` | Analiza un GPX: cobertura de OpenStreetMap a lo largo de la ruta (Overpass API) y alturas frente a Terrain Tiles (Terrarium). Uso: `python -I tools/gpx_check.py <ruta.gpx> cache/<nombre>`. Las descargas quedan en `cache/` (ignorada por git, igual que los `.gpx`, `.kml` y `.kmz`). |
-| `app/` | Módulo Android (`cc.juanma.mcm3d`): `sensing/` (monitores de GNSS, orientación, ambiente y energía en un hilo propio), `diagnostics/` (ViewModel y pantalla de diagnóstico), `ui/` (tema y componentes). Código Kotlin en `src/main/java`. |
-| `core/` | Módulo Kotlin puro, sin Android: ángulos, orientación de la cámara desde la matriz de rotación, altitud barométrica, bandas GNSS, medidores de frecuencia y promedios, cálculo de consumo. Pruebas JUnit en `src/test`. |
+| `app/` | Módulo Android (`cc.juanma.mcm3d`): `sensing/` (monitores de GNSS, orientación, ambiente y energía en un hilo propio), `recording/` (servicio en primer plano y grabador de sesiones a CSV), `diagnostics/` (ViewModel, pantalla de diagnóstico y tarjeta de prueba de campo), `ui/` (tema y componentes). Código Kotlin en `src/main/java`. |
+| `core/` | Módulo Kotlin puro, sin Android: ángulos, orientación de la cámara desde la matriz de rotación, altitud barométrica, bandas GNSS, medidores de frecuencia y promedios, cálculo de consumo, filtros de grabación (descartar datos repetidos, detectar quietud). Pruebas JUnit en `src/test`. |
 | `gradle/`, `gradlew`, `gradlew.bat` | Wrapper de Gradle (checksum fijado) y catálogo de versiones `gradle/libs.versions.toml`. |
 | `tools/deploy.ps1` | Compila, instala en el celular y abre la app (`-Logcat` para ver logs, `-NoLaunch` para solo instalar). |
+| `tools/pull-sessions.ps1` | Descarga las sesiones grabadas del celular a `recordings/` (ignorada por git; `-Delete` las borra del celular). |
+| `tools/session_summary.py` | Resume una sesión: duración, distancia, precisión GNSS, pausas, batería y presión. Uso: `python -I tools/session_summary.py recordings/<archivo>.csv`. |
 
 ## Proyecto Android
 
-- applicationId y namespace: `cc.juanma.mcm3d`. Versión actual: 0.1.0 (versionCode 1).
+- applicationId y namespace: `cc.juanma.mcm3d`. Versión actual: 0.2.0 (versionCode 2).
 - Gradle 9.8.2 (wrapper), AGP 9.4.1 con Kotlin integrado (sin plugin `kotlin-android`), Kotlin 2.4.21, Compose BOM 2026.09.00, Material 3. `:core` usa el plugin `kotlin-jvm`.
 - minSdk 26, compileSdk 37 (las librerías AndroidX actuales lo exigen; AGP descargó la plataforma 37), targetSdk 36 (Android 16, el del S23 Ultra), Java/JVM 17. Release con R8 y reducción de recursos.
 - Compilar y probar sin celular: `.\gradlew.bat :core:test :app:assembleDebug` (requiere `JAVA_HOME` al JDK 17; en terminales viejas, tomarlo de la variable de sistema).
@@ -94,17 +96,29 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 
 - 2026-11-02: primera prueba de la v0.1.0 en el S23 Ultra, bajo techo y quieto (24 lx): arranca sin fallos y pide el permiso de ubicación. GNSS: ±10,2 m horizontal, ±2,8 m vertical, 20/29 satélites (Galileo 7, GPS 6, BeiDou 5, GLONASS 2), 2 señales L5/E5a, 30,8 dB-Hz. Altitud GNSS 2073,7 m frente a 2003 m barométrica estándar (diferencia esperada: la estándar no corrige por clima). Orientación: interferencia magnética (22,8 µT medidos frente a 30,2 esperados), declinación −7,8°, "precisión estimada del rumbo" en n/d (el Rotation Vector de QTI no parece reportarla). Energía con pantalla encendida y sin cámara: ~305 mA, 6,5 a 6,9 %/h, 27 °C, estado térmico normal. Rotation Vector y Game Rotation Vector a 52 Hz, magnetómetro 50 Hz, barómetro 5 Hz.
 
+- 2026-11-02: v0.2.0: botón "Iniciar prueba" (grabación de sesiones). Ver "Grabación de sesiones". 29 pruebas de `:core` pasan; lint sin errores. Probado en el S23 Ultra: servicio en primer plano activo, permisos de actividad física y notificaciones concedidos.
+- 2026-11-02: el Rotation Vector de QTI entrega `values[4] = -1` (precisión del rumbo desconocida): por eso la pantalla muestra n/d. No es un error de la app; la precisión del rumbo habrá que estimarla nosotros.
+
+### Grabación de sesiones (v0.2.0)
+
+- Servicio en primer plano de tipo `location`, iniciado por el usuario desde la tarjeta "Prueba de campo"; graba con la pantalla apagada. Notificación con "Marcar punto" y "Detener prueba".
+- Archivo CSV por sesión en `/sdcard/Android/data/cc.juanma.mcm3d/files/sessions/session_AAAAMMDD_HHMMSS.csv`; las columnas de cada tipo de fila están en la cabecera del archivo. Filas: FIX (posición), SAT (cada satélite, cada 30 s), ORI (orientación: cuaterniones de Rotation Vector y Game Rotation Vector, magnetómetro, rumbo calculado), BARO, PWR (batería cada 60 s, pantalla, luz), MODE, MARK, END.
+- Sin datos repetidos: FIX solo al moverse ≥ 5 m, girar ≥ 25°, mejorar mucho la precisión o cada 60 s; ORI como máximo 1 por segundo y solo si cambia ≥ 3° (o cada 15 s); BARO si cambia ≥ 0,05 hPa (o cada 60 s).
+- Ahorro: sin temporizadores ni wake locks; sensores a 10 Hz con lotes de 1 s. Si en 3 min no sale de un radio de 30 m (o 1,5 veces la precisión) y da menos de 40 pasos, pasa a modo quieto: apaga GNSS y sensores y espera al sensor de movimiento significativo (bajo consumo) o 15 pasos para reanudar. En modo quieto no se escriben filas.
+- Descarga: `.\tools\pull-sessions.ps1`. Las grabaciones tienen ubicaciones reales: nunca subirlas al repositorio.
+
 ### En curso
+
+- 2026-11-03: prueba de campo casa → universidad con la v0.2.0; luego descargar la sesión, resumirla y evaluar GNSS, rumbo, barómetro, pausas y consumo.
 
 - Completar la prueba de la v0.1.0 a cielo abierto: precisión GNSS sin techo, rumbo frente a un norte conocido, brújula frente a rumbo de avance caminando, barómetro subiendo un piso.
 - Revisar por qué la precisión del rumbo sale n/d (¿leer `values[4]` o usar `onAccuracyChanged` del magnetómetro?).
-- Siguiente hito: grabación de sesiones (GNSS + sensores) a archivo para reproducirlas en el PC y ajustar los algoritmos.
 - Pendiente: leer las capacidades de vibración del S23 Ultra (`adb shell dumpsys vibrator_manager`: control de amplitud y primitivas hápticas). No se pudo porque la depuración inalámbrica se había apagado.
 
 ### Por implementar (borrador, se ajusta tras la discusión)
 
 1. Esqueleto del proyecto (Kotlin, Gradle, script de despliegue al celular). Hecho en v0.1.0.
-2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro y consumo de corriente. Decide si hace falta ARCore. Diagnóstico en vivo hecho en v0.1.0; falta la grabación de sesiones.
+2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro y consumo de corriente. Decide si hace falta ARCore. Diagnóstico en vivo hecho en v0.1.0; grabación de sesiones en v0.2.0.
 3. Cámara en vivo con un marcador fijo hacia un punto conocido (validar que orientación y proyección cuadran).
 4. Grabación de rutas en segundo plano e importación de GPX/KML/KMZ.
 5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación (elegir entre Terrarium y Copernicus comparándolos en la ruta de prueba).
