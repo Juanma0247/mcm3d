@@ -15,6 +15,7 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 |---|---|
 | `CLAUDE.md` | Este archivo: idea general, estado, decisiones, ideas y backlog. |
 | `docs/flujo-de-trabajo.md` | Guía para preparar el PC, conectar el celular (USB o Wi-Fi) y el ciclo editar, compilar, probar. |
+| `docs/prueba-campo-2026-11-03.md` | Análisis de la primera sesión grabada (8 h con la v0.2.0): GNSS, orientación, barómetro, pausas, energía e implicaciones para el diseño. Sin coordenadas. |
 | `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Es un respaldo para cuando el celular está en otra subred. Sin probar: el sistema de permisos bloqueó su ejecución. |
 | `tools/gpx_check.py` | Analiza un GPX: cobertura de OpenStreetMap a lo largo de la ruta (Overpass API) y alturas frente a Terrain Tiles (Terrarium). Uso: `python -I tools/gpx_check.py <ruta.gpx> cache/<nombre>`. Las descargas quedan en `cache/` (ignorada por git, igual que los `.gpx`, `.kml` y `.kmz`). |
 | `app/` | Módulo Android (`cc.juanma.mcm3d`): `sensing/` (monitores de GNSS, orientación, ambiente y energía en un hilo propio), `recording/` (servicio en primer plano y grabador de sesiones a CSV), `diagnostics/` (ViewModel, pantalla de diagnóstico y tarjeta de prueba de campo), `ui/` (tema y componentes). Código Kotlin en `src/main/java`. |
@@ -107,9 +108,9 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - Ahorro: sin temporizadores ni wake locks; sensores a 10 Hz con lotes de 1 s. Si en 3 min no sale de un radio de 30 m (o 1,5 veces la precisión) y da menos de 40 pasos, pasa a modo quieto: apaga GNSS y sensores y espera al sensor de movimiento significativo (bajo consumo) o 15 pasos para reanudar. En modo quieto no se escriben filas.
 - Descarga: `.\tools\pull-sessions.ps1`. Las grabaciones tienen ubicaciones reales: nunca subirlas al repositorio.
 
-### En curso
+- 2026-11-05: análisis de la prueba de campo del 2026-11-03 (8 h, 3,65 km a pie, 74 % del tiempo en pausa), detalle en `docs/prueba-campo-2026-11-03.md`. Resultados clave: GNSS caminando ±3,8 m (el chip reporta la precisión en escalones fijos, no sirve como medida fina), rumbo de avance del GPS ±36° a paso de caminata (usar desplazamiento acumulado), reanudar GNSS tras pausa tarda 1 a 3 s, el barómetro deriva 5 a 7 m/h por la marea atmosférica (fusionar con GNSS), 15 reanudaciones falsas por movimiento significativo (46 min de GNSS inútil), consumo 2,8 %/h en total y 120 mA grabando con pantalla apagada. Defecto encontrado: en ORI el Game Rotation Vector no es del mismo instante que el Rotation Vector.
 
-- 2026-11-03: prueba de campo casa → universidad con la v0.2.0; luego descargar la sesión, resumirla y evaluar GNSS, rumbo, barómetro, pausas y consumo.
+### En curso
 
 - Completar la prueba de la v0.1.0 a cielo abierto: precisión GNSS sin techo, rumbo frente a un norte conocido, brújula frente a rumbo de avance caminando, barómetro subiendo un piso.
 - Revisar por qué la precisión del rumbo sale n/d (¿leer `values[4]` o usar `onAccuracyChanged` del magnetómetro?).
