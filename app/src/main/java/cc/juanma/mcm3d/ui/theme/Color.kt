@@ -21,4 +21,6 @@ internal object Palette {
   val Warning = Color(0xFFFFC94D)
   val Critical = Color(0xFFFF5A5F)
   val OnCritical = Color(0xFF2B0003)
+  val Halo = Color(0xCC05070A)
+  val Trace = Color(0xFF5CC8F0)
 }

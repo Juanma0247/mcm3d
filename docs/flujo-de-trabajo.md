@@ -123,6 +123,21 @@ adb pull /sdcard/mcm3d_shot.png
 
 En PowerShell no se usa `adb exec-out screencap -p > archivo.png`, porque la redirección corrompe el archivo binario.
 
+Importar una ruta de prueba sin tocar el celular (sirve con la pantalla bloqueada): se copia a la carpeta de la app y se le pasa con un intent explícito.
+
+```powershell
+adb push ruta.gpx /sdcard/Android/data/cc.juanma.mcm3d/files/ruta.gpx
+adb shell am start -n cc.juanma.mcm3d/.MainActivity -a android.intent.action.VIEW -d file:///sdcard/Android/data/cc.juanma.mcm3d/files/ruta.gpx
+```
+
+La versión debug permite leer los datos privados de la app con `run-as` (base Room, trazas y teselas):
+
+```powershell
+adb shell run-as cc.juanma.mcm3d ls -R files databases
+```
+
+Las rutas de prueba que se suban al repositorio deben ser sintéticas: los `.gpx`, `.kml` y `.kmz` están ignorados por git.
+
 ## 7. Pruebas en campo (lejos del PC)
 
 Al salir a caminar el celular pierde la conexión con el PC. Para no perder información:

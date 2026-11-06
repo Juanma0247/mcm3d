@@ -14,6 +14,20 @@ internal val MetricValueStyle = TextStyle(
   fontFeatureSettings = "tnum",
 )
 
+internal val StatValueStyle = TextStyle(
+  fontSize = 22.sp,
+  lineHeight = 28.sp,
+  fontWeight = FontWeight.SemiBold,
+  fontFeatureSettings = "tnum",
+)
+
+internal val HeroValueStyle = TextStyle(
+  fontSize = 34.sp,
+  lineHeight = 40.sp,
+  fontWeight = FontWeight.SemiBold,
+  fontFeatureSettings = "tnum",
+)
+
 internal val SectionTitleStyle = TextStyle(
   fontSize = 12.sp,
   lineHeight = 16.sp,

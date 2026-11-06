@@ -18,8 +18,9 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 | `docs/prueba-campo-2026-11-03.md` | Análisis de la primera sesión grabada (8 h con la v0.2.0): GNSS, orientación, barómetro, pausas, energía e implicaciones para el diseño. Sin coordenadas. |
 | `tools/connect-phone.ps1` | Conecta `adb` al celular por Wi-Fi sin pedir el puerto: prueba mDNS, el último puerto usado (`tools/.last-phone`, ignorado por git) y, si falla, escanea los puertos del celular. Es un respaldo para cuando el celular está en otra subred. Sin probar: el sistema de permisos bloqueó su ejecución. |
 | `tools/gpx_check.py` | Analiza un GPX: cobertura de OpenStreetMap a lo largo de la ruta (Overpass API) y alturas frente a Terrain Tiles (Terrarium). Uso: `python -I tools/gpx_check.py <ruta.gpx> cache/<nombre>`. Las descargas quedan en `cache/` (ignorada por git, igual que los `.gpx`, `.kml` y `.kmz`). |
-| `app/` | Módulo Android (`cc.juanma.mcm3d`): `sensing/` (monitores de GNSS, orientación, ambiente y energía en un hilo propio), `recording/` (servicio en primer plano y grabador de sesiones a CSV), `diagnostics/` (ViewModel, pantalla de diagnóstico y tarjeta de prueba de campo), `ui/` (tema y componentes). Código Kotlin en `src/main/java`. |
-| `core/` | Módulo Kotlin puro, sin Android: ángulos, orientación de la cámara desde la matriz de rotación, altitud barométrica, bandas GNSS, medidores de frecuencia y promedios, cálculo de consumo, filtros de grabación (descartar datos repetidos, detectar quietud). Pruebas JUnit en `src/test`. |
+| `app/` | Módulo Android (`cc.juanma.mcm3d`), código Kotlin en `src/main/java`: `Mcm3dApplication.kt` (grafo de dependencias manual), `AppViewModel.kt` (pila de navegación, importación, mensajes), `MainActivity.kt` (recibe archivos por Abrir con y Compartir), `data/` (Room: rutas y puntos de referencia; trazas binarias; repositorio), `elevation/` (teselas Terrarium y tarea de WorkManager que recalcula alturas), `importing/` (importador desde un `Uri`), `routes/` (Mis rutas y Detalle de ruta), `outing/` (pantalla de la salida en curso), `recording/` (servicio en primer plano, grabador de salidas y grabador de diagnóstico a CSV), `sensing/` (monitores de GNSS, orientación, ambiente y energía en un hilo propio), `diagnostics/` (pantalla de diagnóstico y prueba de campo), `ui/` (navegación, tema, formatos y componentes: mapa 2D, perfil de altura, cifras). |
+| `app/schemas/` | Esquemas exportados de la base de datos Room (sirven para escribir migraciones). Se suben al repositorio. |
+| `core/` | Módulo Kotlin puro, sin Android: `route/` (lectura de GPX, KML y KMZ, escritura de GPX, densificar, distancias, suavizado de alturas, desnivel con histéresis, formato binario de trazas, avance sobre una ruta y detección de salida de ruta), `elevation/` (Terrarium: decodificación, teselas, muestreo bilineal), `baro/` (altitud barométrica y fusión barómetro + GNSS), `orientation/`, `geo/`, `gnss/`, `stats/`, `power/` y `recording/` (filtros de grabación y detector de quietud con periodo de prueba). Pruebas JUnit en `src/test` con datos sintéticos. |
 | `gradle/`, `gradlew`, `gradlew.bat` | Wrapper de Gradle (checksum fijado) y catálogo de versiones `gradle/libs.versions.toml`. |
 | `tools/deploy.ps1` | Compila, instala en el celular y abre la app (`-Logcat` para ver logs, `-NoLaunch` para solo instalar). |
 | `tools/pull-sessions.ps1` | Descarga las sesiones grabadas del celular a `recordings/` (ignorada por git; `-Delete` las borra del celular). |
@@ -27,8 +28,11 @@ Workspace de **MCM3D** (nombre provisional): aplicativo Android de navegación c
 
 ## Proyecto Android
 
-- applicationId y namespace: `cc.juanma.mcm3d`. Versión actual: 0.2.0 (versionCode 2).
+- applicationId y namespace: `cc.juanma.mcm3d`. Versión actual: 0.3.0 (versionCode 3).
 - Gradle 9.8.2 (wrapper), AGP 9.4.1 con Kotlin integrado (sin plugin `kotlin-android`), Kotlin 2.4.21, Compose BOM 2026.09.00, Material 3. `:core` usa el plugin `kotlin-jvm`.
+- Desde la v0.3.0: Navigation 3 1.2.0 (con el decorador de ViewModel de lifecycle 2.11.0), Room 2.8.5 con KSP 2.3.13 (la primera versión de KSP posterior a Kotlin 2.4.21) y el plugin de Room para exportar el esquema, WorkManager 2.12.0. `:core` compila contra la API XmlPull (`compileOnly`, Android ya la trae) y prueba con kXML 2.3.0.
+- Datos en el celular: base Room `mcm3d.db` (rutas y puntos de referencia), trazas en `files/tracks/<id>.trk` (formato binario de `TrackCodec`: cabecera de 16 bytes y registros fijos de 16 bytes), teselas de elevación en `files/elevation/13/<x>/<y>.png`, exportaciones GPX temporales en `cache/exports/`.
+- Red: solo para descargar teselas de elevación (permiso `INTERNET`), con `HttpURLConnection`. El resto funciona sin conexión.
 - minSdk 26, compileSdk 37 (las librerías AndroidX actuales lo exigen; AGP descargó la plataforma 37), targetSdk 36 (Android 16, el del S23 Ultra), Java/JVM 17. Release con R8 y reducción de recursos.
 - Compilar y probar sin celular: `.\gradlew.bat :core:test :app:assembleDebug` (requiere `JAVA_HOME` al JDK 17; en terminales viejas, tomarlo de la variable de sistema).
 - Textos de la interfaz en español en `res/values/strings.xml` (idioma por defecto); el inglés irá en `values-en` más adelante.
@@ -79,6 +83,7 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - Sensores fusionados (QTI): Rotation Vector, Game Rotation Vector, gravity, linear acceleration; además detector y contador de pasos (Samsung) y versiones sin calibrar de acelerómetro, giroscopio y magnetómetro.
 - GNSS: Qualcomm GNSS Gen9, doble frecuencia L1 + L5 (usa L5 en el fix). Capacidades: MEASUREMENTS (mediciones crudas), SATELLITE_PVT, MEASUREMENT_CORRECTIONS (LOS_SATS, EXCESS_PATH_LENGTH, REFLECTING_PLANE), ACCUMULATED_DELTA_RANGE (estado desconocido).
 - ARCore (Google Play Services for AR) instalado, versión 1.57.
+- Vibración (leída el 2026-11-06): un motor con control de amplitud y efectos compuestos. Primitivas: CLICK (20 ms), TICK (20 ms), LOW_TICK (20 ms), QUICK_FALL (100 ms), SPIN (130 ms), QUICK_RISE (150 ms), THUD (300 ms), SLOW_RISE (500 ms); efectos CLICK, DOUBLE_CLICK, TICK, HEAVY_CLICK. Sin control de frecuencia ni envolventes. Sirve para los patrones de aviso por ritmo e intensidad.
 - Conexión adb: vinculado por depuración inalámbrica (`adb-R5CX60MG4SM`). PC y celular están en la misma red (DESIGNIO2, `192.168.0.x`), así que `adb` descubre el celular por mDNS y se conecta solo (serial `adb-R5CX60MG4SM-YcULU6._adb-tls-connect._tcp`), sin dictar puertos.
 - Si el celular queda en otra subred, mDNS deja de funcionar: hay que dictar el puerto de conexión o usar `tools/connect-phone.ps1`.
 - Si queda una sesión vieja `offline` que provoca "more than one device", se limpia con `adb kill-server` seguido de `adb start-server`.
@@ -100,6 +105,15 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - 2026-11-02: v0.2.0: botón "Iniciar prueba" (grabación de sesiones). Ver "Grabación de sesiones". 29 pruebas de `:core` pasan; lint sin errores. Probado en el S23 Ultra: servicio en primer plano activo, permisos de actividad física y notificaciones concedidos.
 - 2026-11-02: el Rotation Vector de QTI entrega `values[4] = -1` (precisión del rumbo desconocida): por eso la pantalla muestra n/d. No es un error de la app; la precisión del rumbo habrá que estimarla nosotros.
 
+### Rutas y salidas (v0.3.0)
+
+- Pantallas: Mis rutas (lista, importar, nueva salida, aviso de salida en curso), Detalle de ruta (mapa 2D, cifras, perfil de altura, puntos de referencia, cambiar nombre, eliminar, exportar GPX, "Seguir esta ruta"), Salida en curso (estado del GPS, lo que falta, en ruta o fuera de ruta, tiempo, distancia, altura, desnivel, mapa con la ruta y lo recorrido, perfil con la posición, marcar punto, terminar) y Diagnóstico (la pantalla anterior, con la prueba de campo y la atribución de los datos de elevación). Al terminar una salida se abre su detalle.
+- Importación: GPX, KML y KMZ por Abrir con, Compartir o el selector de archivos; el formato se reconoce por el contenido. Se unen todos los segmentos, se ignoran las horas, se descartan coordenadas inválidas y archivos con entidades XML. La ruta se densifica a un punto cada 10 m como máximo.
+- Alturas de rutas importadas: quedan "pendientes" con las del archivo hasta que una tarea de WorkManager (con red) descarga las teselas Terrarium z13 de la zona (1 km alrededor de la ruta, quedan guardadas para uso offline), muestrea cada punto con interpolación bilineal y suaviza con una gaussiana de σ = 20 m a lo largo de la distancia. Si tras 8 intentos no se puede, se conservan las del archivo. Desnivel con histéresis de 3 m.
+- Grabación de una salida (`OutingRecorder`): solo GNSS, barómetro (1 Hz, lotes de 2 s) y contador de pasos; posiciones con precisión ≤ 30 m filtradas como en la prueba de campo (≥ 5 m, giro, mejora de precisión o 60 s). Altura de cada punto con `AltitudeFusion`: barómetro para el corto plazo y GNSS para corregir la deriva (constante de tiempo de 5 min; sin barómetro, GNSS suavizado). Puntos guardados en lotes cada 30 s. Pausa por quietud igual que la prueba de campo, con el periodo de prueba de 60 s al despertar sin pasos.
+- Seguimiento de una ruta: `RouteProgressTracker` proyecta la posición sobre la ruta buscando primero cerca de la última coincidencia (resuelve rutas circulares y tramos de ida y vuelta); "fuera de ruta" a más de max(35 m, 2,5 × precisión), "de vuelta" a menos de max(20 m, 1,5 × precisión). Aún sin avisos por vibración.
+- La notificación muestra distancia, lo que falta o el desvío, y tiene "Marcar punto" y "Terminar". Una salida interrumpida (proceso cerrado) se cierra sola al abrir la app.
+
 ### Grabación de sesiones (v0.2.0)
 
 - Servicio en primer plano de tipo `location`, iniciado por el usuario desde la tarjeta "Prueba de campo"; graba con la pantalla apagada. Notificación con "Marcar punto" y "Detener prueba".
@@ -107,22 +121,25 @@ Escenario objetivo: senderismo en los alrededores de Manizales, donde no suele h
 - Sin datos repetidos: FIX solo al moverse ≥ 5 m, girar ≥ 25°, mejorar mucho la precisión o cada 60 s; ORI como máximo 1 por segundo y solo si cambia ≥ 3° (o cada 15 s); BARO si cambia ≥ 0,05 hPa (o cada 60 s).
 - Ahorro: sin temporizadores ni wake locks; sensores a 10 Hz con lotes de 1 s. Si en 3 min no sale de un radio de 30 m (o 1,5 veces la precisión) y da menos de 40 pasos, pasa a modo quieto: apaga GNSS y sensores y espera al sensor de movimiento significativo (bajo consumo) o 15 pasos para reanudar. En modo quieto no se escriben filas.
 - Descarga: `.\tools\pull-sessions.ps1`. Las grabaciones tienen ubicaciones reales: nunca subirlas al repositorio.
+- Formato 2 (v0.3.0): cada fila ORI espera al Game Rotation Vector más cercano en el tiempo (máximo 60 ms) y agrega la columna `grv_dt_ms` con la diferencia; sin coincidencia, las columnas del Game Rotation Vector quedan vacías. Tras despertar por movimiento significativo sin pasos hay un periodo de prueba de 60 s; "Marcar punto" reanuda el GNSS si estaba en pausa.
 
 - 2026-11-05: análisis de la prueba de campo del 2026-11-03 (8 h, 3,65 km a pie, 74 % del tiempo en pausa), detalle en `docs/prueba-campo-2026-11-03.md`. Resultados clave: GNSS caminando ±3,8 m (el chip reporta la precisión en escalones fijos, no sirve como medida fina), rumbo de avance del GPS ±36° a paso de caminata (usar desplazamiento acumulado), reanudar GNSS tras pausa tarda 1 a 3 s, el barómetro deriva 5 a 7 m/h por la marea atmosférica (fusionar con GNSS), 15 reanudaciones falsas por movimiento significativo (46 min de GNSS inútil), consumo 2,8 %/h en total y 120 mA grabando con pantalla apagada. Defecto encontrado: en ORI el Game Rotation Vector no es del mismo instante que el Rotation Vector.
 
+- 2026-11-06: v0.3.0, primera versión de la app real: rutas (importar GPX/KML/KMZ, detalle con mapa 2D y perfil, exportar GPX), salidas grabadas con altura fusionada barómetro + GNSS, seguimiento de una ruta con distancia restante y aviso visual de salida de ruta, alturas del modelo de elevación al importar, mejoras del grabador de diagnóstico por la prueba de campo. Ver "Rutas y salidas (v0.3.0)". Probado en el S23 Ultra sin desbloquear la pantalla: arranca sin errores, importa una ruta sintética por intent y la tarea de alturas descarga 2 teselas y reescribe la traza en 1 s; las alturas coinciden con un cálculo independiente en Python (diferencia menor a 1 mm).
+
 ### En curso
 
-- Completar la prueba de la v0.1.0 a cielo abierto: precisión GNSS sin techo, rumbo frente a un norte conocido, brújula frente a rumbo de avance caminando, barómetro subiendo un piso.
-- Revisar por qué la precisión del rumbo sale n/d (¿leer `values[4]` o usar `onAccuracyChanged` del magnetómetro?).
-- Pendiente: leer las capacidades de vibración del S23 Ultra (`adb shell dumpsys vibrator_manager`: control de amplitud y primitivas hápticas). No se pudo porque la depuración inalámbrica se había apagado.
+- Probar la v0.3.0 en el celular con la pantalla desbloqueada: aspecto de las pantallas, importar una ruta real desde otra app (Compartir y Abrir con), seguir una ruta en una salida corta, marcar puntos, terminar y exportar el GPX. Revisar si el suavizado de alturas (σ = 20 m) da un desnivel razonable en una ruta conocida.
+- Completar la prueba de la v0.1.0 a cielo abierto y en pose AR (celular en la mano apuntando al frente): precisión GNSS sin techo, rumbo frente a un norte conocido, brújula frente a rumbo de avance caminando, deriva del Game Rotation Vector (ahora medible con el formato 2), barómetro subiendo un piso. La prueba del 2026-11-03 fue casi toda en el bolsillo.
+- Precisión del rumbo: cerrado. El Rotation Vector de QTI da `values[4] = -1` y el magnetómetro reporta siempre precisión 3 (prueba del 2026-11-03), así que ninguno sirve: la calidad del rumbo la estimará la app (magnitud del campo frente al modelo WMM, acuerdo con el rumbo de avance y con el Game Rotation Vector).
 
 ### Por implementar (borrador, se ajusta tras la discusión)
 
 1. Esqueleto del proyecto (Kotlin, Gradle, script de despliegue al celular). Hecho en v0.1.0.
 2. Pantalla de diagnóstico y grabación de sesiones: precisión del GPS, brújula frente a dirección de avance, deriva, barómetro y consumo de corriente. Decide si hace falta ARCore. Diagnóstico en vivo hecho en v0.1.0; grabación de sesiones en v0.2.0.
-3. Cámara en vivo con un marcador fijo hacia un punto conocido (validar que orientación y proyección cuadran).
-4. Grabación de rutas en segundo plano e importación de GPX/KML/KMZ.
-5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación (elegir entre Terrarium y Copernicus comparándolos en la ruta de prueba).
+3. Cámara en vivo con un marcador fijo hacia un punto conocido (validar que orientación y proyección cuadran). Siguiente paso tras probar la v0.3.0; puede usar los puntos de referencia de una ruta importada como marcadores.
+4. Grabación de rutas en segundo plano e importación de GPX/KML/KMZ. Hecho en v0.3.0 (falta: avisos por vibración al salirse de la ruta y en bifurcaciones, estimación de batería restante).
+5. Paquete offline de zona: senderos de OpenStreetMap y modelo de elevación (elegir entre Terrarium y Copernicus comparándolos en la ruta de prueba). Elevación Terrarium alrededor de cada ruta importada hecha en v0.3.0; faltan senderos y nombres de OSM, la zona alrededor de la ubicación antes de grabar y la comparación con Copernicus.
 6. Vista AR: ruta por delante y recorrido hecho, fijos en el mundo, con ajuste a la ruta y aviso en bifurcaciones.
 7. Plan B: ARCore, solo si el diagnóstico lo justifica.
 8. Optimización de energía, memoria y rendimiento.
@@ -312,3 +329,8 @@ Para terminar con ≥ 40 % habría que bajar la vista AR a ~15 %/h (total ~59 %)
 - 2026-10-27: reporte de fallos con Android vitals y registro local; Crashlytics más adelante.
 - 2026-10-27: applicationId `cc.juanma.mcm3d`.
 - 2026-10-27: objetivos iniciales de consumo y rendimiento aprobados (punto 5); salida típica de 8 h con hasta 20 % en AR y 20 % en otras vistas en pantalla; se optimiza sobre la marcha.
+- 2026-11-05: tras la prueba de campo, la v0.3.0 empieza por la base de la app y las rutas (pantallas, importación, salidas grabadas, exportación); la cámara AR con marcador fijo va justo después.
+- 2026-11-05: al importar una ruta se recalculan sus alturas con Terrarium ya en la v0.3.0 (agrega el permiso de internet y WorkManager); el resto del paquete de zona (senderos y nombres de OSM) queda para después.
+- 2026-11-06: descargas con `HttpURLConnection` en lugar de OkHttp: son pocas teselas pequeñas y así se evita una dependencia; se reconsidera para las consultas grandes de Overpass.
+- 2026-11-06: Navigation 3 en lugar de Navigation Compose (es la navegación pensada para Compose y no exige kotlinx.serialization si la pila no se guarda al morir el proceso).
+- 2026-11-06: trazas en archivos binarios propios (registros fijos de 16 bytes) y metadatos en Room, como decía el stack; densificado a 10 m, teselas z13 con 1 km de margen, suavizado gaussiano de σ = 20 m y desnivel con histéresis de 3 m.

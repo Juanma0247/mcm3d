@@ -1,6 +1,8 @@
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.ksp)
+  alias(libs.plugins.room)
 }
 
 android {
@@ -11,8 +13,8 @@ android {
     applicationId = "cc.juanma.mcm3d"
     minSdk = 26
     targetSdk = 36
-    versionCode = 2
-    versionName = "0.2.0"
+    versionCode = 3
+    versionName = "0.3.0"
   }
 
   buildTypes {
@@ -34,6 +36,10 @@ android {
   }
 }
 
+room {
+  schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
   implementation(project(":core"))
   implementation(libs.androidx.core.ktx)
@@ -44,6 +50,13 @@ dependencies {
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
+  implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+  implementation(libs.androidx.navigation3.runtime)
+  implementation(libs.androidx.navigation3.ui)
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
+  ksp(libs.androidx.room.compiler)
+  implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.kotlinx.coroutines.android)
   debugImplementation(libs.androidx.compose.ui.tooling)
 }

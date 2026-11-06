@@ -38,10 +38,13 @@ import cc.juanma.mcm3d.BuildConfig
 import cc.juanma.mcm3d.R
 import cc.juanma.mcm3d.recording.RecordingService
 import cc.juanma.mcm3d.recording.RecordingStatus
+import cc.juanma.mcm3d.ui.components.BackButton
+import cc.juanma.mcm3d.ui.components.SectionCard
+import cc.juanma.mcm3d.ui.components.SectionNote
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = viewModel()) {
+fun DiagnosticsScreen(onBack: () -> Unit, viewModel: DiagnosticsViewModel = viewModel()) {
   val state by viewModel.state.collectAsStateWithLifecycle()
   val context = LocalContext.current
   var permissionDenied by rememberSaveable { mutableStateOf(false) }
@@ -55,7 +58,7 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = viewModel()) {
   val recording by RecordingStatus.state.collectAsStateWithLifecycle()
   val recordingPermissionLauncher = rememberLauncherForActivityResult(
     ActivityResultContracts.RequestMultiplePermissions(),
-  ) { RecordingService.start(context) }
+  ) { RecordingService.startSession(context) }
 
   LifecycleStartEffect(viewModel) {
     viewModel.start()
@@ -67,6 +70,7 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = viewModel()) {
     containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       TopAppBar(
+        navigationIcon = { BackButton(onBack) },
         title = {
           Column {
             Text(stringResource(R.string.diagnostics_title), style = MaterialTheme.typography.titleLarge)
@@ -110,7 +114,7 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = viewModel()) {
             recording = recording,
             onStart = { recordingPermissionLauncher.launch(recordingPermissions()) },
             onMark = { RecordingService.mark(context) },
-            onStop = { RecordingService.stop(context) },
+            onStop = { RecordingService.stopSession(context) },
           )
         }
       }
@@ -119,6 +123,12 @@ fun DiagnosticsScreen(viewModel: DiagnosticsViewModel = viewModel()) {
       item(key = "environment") { EnvironmentSection(state.environment, viewModel::resetRelativeAltitude) }
       item(key = "power") { PowerSection(state.power) }
       item(key = "sensors") { SensorsSection(state.sensors, state.measuredRatesHz) }
+      item(key = "about") {
+        SectionCard(stringResource(R.string.section_about)) {
+          SectionNote(stringResource(R.string.version_label, BuildConfig.VERSION_NAME))
+          SectionNote(stringResource(R.string.about_elevation_attribution))
+        }
+      }
     }
   }
 }

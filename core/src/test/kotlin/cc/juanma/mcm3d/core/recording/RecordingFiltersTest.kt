@@ -66,4 +66,29 @@ class RecordingFiltersTest {
     detector.restart(0, 0)
     assertTrue(detector.isStill(180_000, 10))
   }
+
+  @Test
+  fun probationReturnsToStillQuicklyWhenThePhoneWasOnlyHandled() {
+    val detector = StillnessDetector(windowMs = 180_000, probationMs = 60_000)
+    detector.restart(0, 0, probation = true)
+    detector.onFix(3_000, lat, lon, 9.9, 0)
+    assertFalse(detector.isStill(30_000, 2))
+    assertTrue(detector.isStill(60_000, 3))
+  }
+
+  @Test
+  fun probationEndsWithStepsOrDisplacement() {
+    val walking = StillnessDetector(windowMs = 180_000, probationMs = 60_000, probationMaxSteps = 12)
+    walking.restart(0, 0, probation = true)
+    assertFalse(walking.isStill(20_000, 15))
+    assertFalse(walking.inProbation)
+    assertFalse(walking.isStill(100_000, 20))
+
+    val moved = StillnessDetector(windowMs = 180_000, probationMs = 60_000)
+    moved.restart(0, 0, probation = true)
+    moved.onFix(2_000, lat, lon, 5.0, 0)
+    moved.onFix(40_000, lat + 60 / metersPerDegree, lon, 5.0, 0)
+    assertFalse(moved.inProbation)
+    assertFalse(moved.isStill(70_000, 0))
+  }
 }

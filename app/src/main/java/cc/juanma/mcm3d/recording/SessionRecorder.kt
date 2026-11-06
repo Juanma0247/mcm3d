@@ -63,10 +63,17 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
   private var steps = 0L
   private val rotation = FloatArray(5)
   private val rotationQuaternion = FloatArray(4)
-  private val gameRotation = FloatArray(4)
   private val magnetic = FloatArray(3)
-  private var hasGameRotation = false
   private var hasMagnetic = false
+
+  // Recent Game Rotation Vector samples: batched delivery can hand them over before or after the
+  // Rotation Vector of the same instant, so each ORI row waits for the closest one.
+  private val gameTimes = LongArray(GAME_HISTORY)
+  private val gameValues = FloatArray(GAME_HISTORY * 4)
+  private val gameQuaternion = FloatArray(4)
+  private var gameCount = 0
+  private var pendingOrientationNanos = Long.MIN_VALUE
+  private val pendingRotation = FloatArray(5)
   private var magneticAccuracy = -1
   private var lux = Float.NaN
   private val matrix = FloatArray(9)
@@ -98,7 +105,7 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
 
   private val motionTrigger = object : TriggerEventListener() {
     override fun onTrigger(event: TriggerEvent) {
-      SensingThread.handler.post { if (writer != null) resumeMoving("significant_motion") }
+      SensingThread.handler.post { if (writer != null) resumeMoving("significant_motion", probation = true) }
     }
   }
 
@@ -147,6 +154,8 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
     begin("MARK", now).append(marks).append(',').append(steps)
     end()
     flush(now)
+    // A mark needs a fresh position, so it wakes GNSS if the recording was paused.
+    if (mode == RecordingMode.STILL) resumeMoving("mark", probation = true)
     publish()
   }
 
@@ -162,12 +171,12 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
     writeMode(reason)
   }
 
-  private fun resumeMoving(reason: String) {
+  private fun resumeMoving(reason: String, probation: Boolean) {
     if (mode != RecordingMode.STILL) return
     val now = SystemClock.elapsedRealtimeNanos()
     stillTotalNanos += now - stillSinceNanos
     motionSensor?.let { sensorManager.cancelTriggerSensor(motionTrigger, it) }
-    stillness.restart(elapsedMs(now), steps)
+    stillness.restart(elapsedMs(now), steps, probation)
     lastStillCheckNanos = now
     fixFilter.reset()
     enterMoving(reason)
@@ -192,7 +201,8 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
   private fun pauseMotionSensing() {
     gnss.stop()
     sensorManager.unregisterListener(listener)
-    hasGameRotation = false
+    gameCount = 0
+    pendingOrientationNanos = Long.MIN_VALUE
     hasMagnetic = false
     lastHeading = Double.NaN
   }
@@ -258,11 +268,15 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
       Sensor.TYPE_ROTATION_VECTOR -> {
         rotation.fill(Float.NaN)
         event.values.copyInto(rotation, endIndex = minOf(event.values.size, rotation.size))
+        maybeQueueOrientation(event.timestamp)
         maybeWriteOrientation(event.timestamp)
       }
       Sensor.TYPE_GAME_ROTATION_VECTOR -> {
-        event.values.copyInto(gameRotation, endIndex = minOf(event.values.size, gameRotation.size))
-        hasGameRotation = true
+        val slot = gameCount % GAME_HISTORY
+        gameTimes[slot] = event.timestamp
+        event.values.copyInto(gameValues, destinationOffset = slot * 4, endIndex = minOf(event.values.size, 4))
+        gameCount++
+        maybeWriteOrientation(event.timestamp)
       }
       Sensor.TYPE_MAGNETIC_FIELD -> {
         event.values.copyInto(magnetic, endIndex = 3)
@@ -287,11 +301,12 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
     if (stepBase < 0) stepBase = total
     steps = total - stepBase
     if (writer != null && mode == RecordingMode.STILL && steps - stillEntrySteps >= RESUME_STEPS) {
-      resumeMoving("steps")
+      resumeMoving("steps", probation = false)
     }
   }
 
-  private fun maybeWriteOrientation(now: Long) {
+  private fun maybeQueueOrientation(now: Long) {
+    if (pendingOrientationNanos != Long.MIN_VALUE) return
     if (lastOrientationNanos != Long.MIN_VALUE && now - lastOrientationNanos < ORIENTATION_MIN_PERIOD_NANOS) return
     rotation.copyInto(rotationQuaternion, endIndex = 4)
     SensorManager.getRotationMatrixFromVector(matrix, rotationQuaternion)
@@ -305,17 +320,43 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
     lastOrientationNanos = now
     lastHeading = heading
     lastElevation = attitude.cameraElevationDeg
+    pendingOrientationNanos = now
+    rotation.copyInto(pendingRotation)
+  }
 
-    begin("ORI", now)
+  private fun maybeWriteOrientation(now: Long) {
+    val target = pendingOrientationNanos
+    if (target == Long.MIN_VALUE) return
+    val latestGame = if (gameCount > 0) gameTimes[(gameCount - 1) % GAME_HISTORY] else Long.MIN_VALUE
+    val waiting = gameRotationSensor != null && latestGame < target && now - target < GAME_WAIT_NANOS
+    if (waiting) return
+    pendingOrientationNanos = Long.MIN_VALUE
+
+    pendingRotation.copyInto(rotationQuaternion, endIndex = 4)
+    SensorManager.getRotationMatrixFromVector(matrix, rotationQuaternion)
+    val attitude = Attitude.fromRotationMatrix(matrix)
+    begin("ORI", target)
     num(attitude.cameraHeadingDeg, 1)
     num(attitude.cameraElevationDeg, 1)
     num(attitude.rollDeg, 1)
     num(attitude.topHeadingDeg, 1)
-    for (v in rotation) num(v.toDouble(), 5)
-    if (hasGameRotation) {
-      SensorManager.getRotationMatrixFromVector(matrix, gameRotation)
+    for (v in pendingRotation) num(v.toDouble(), 5)
+
+    var nearest = -1
+    var nearestGap = Long.MAX_VALUE
+    for (i in 0 until minOf(gameCount, GAME_HISTORY)) {
+      val gap = abs(gameTimes[i] - target)
+      if (gap < nearestGap) {
+        nearestGap = gap
+        nearest = i
+      }
+    }
+    val aligned = nearest >= 0 && nearestGap <= GAME_MAX_GAP_NANOS
+    if (aligned) {
+      gameValues.copyInto(gameQuaternion, startIndex = nearest * 4, endIndex = nearest * 4 + 4)
+      SensorManager.getRotationMatrixFromVector(matrix, gameQuaternion)
       num(Attitude.fromRotationMatrix(matrix).referenceHeadingDeg, 1)
-      for (v in gameRotation) num(v.toDouble(), 5)
+      for (v in gameQuaternion) num(v.toDouble(), 5)
     } else {
       repeat(5) { line.append(',') }
     }
@@ -324,7 +365,8 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
     } else {
       repeat(3) { line.append(',') }
     }
-    line.append(magneticAccuracy)
+    line.append(magneticAccuracy).append(',')
+    if (aligned) line.append((gameTimes[nearest] - target) / 1_000_000L)
     end()
   }
 
@@ -362,7 +404,7 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
   private fun writeHeader(now: OffsetDateTime) {
     val out = writer ?: return
     val header = buildString {
-      appendLine("# MCM3D session format 1")
+      appendLine("# MCM3D session format 2")
       appendLine("# start=${now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)} start_elapsed_ns=$startNanos")
       appendLine("# device=${Build.MANUFACTURER} ${Build.MODEL} sdk=${Build.VERSION.SDK_INT} app=${BuildConfig.VERSION_NAME}")
       appendLine("# t_ms: milliseconds since start (elapsedRealtime). Empty field: not available.")
@@ -374,7 +416,7 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
       appendLine(
         "# ORI,t_ms,cam_heading_mag_deg,cam_elevation_deg,roll_deg,top_heading_mag_deg," +
           "rv_x,rv_y,rv_z,rv_w,rv_heading_acc_rad,grv_heading_deg,grv_x,grv_y,grv_z,grv_w," +
-          "mag_x_ut,mag_y_ut,mag_z_ut,mag_accuracy",
+          "mag_x_ut,mag_y_ut,mag_z_ut,mag_accuracy,grv_dt_ms",
       )
       appendLine("# BARO,t_ms,pressure_hpa")
       appendLine("# PWR,t_ms,level_pct,current_ma,voltage_v,battery_temp_c,thermal_status,screen_on,lux")
@@ -450,6 +492,9 @@ class SessionRecorder(private val context: Context, private val onModeChanged: (
     const val ORIENTATION_MIN_PERIOD_NANOS = 1_000_000_000L
     const val ORIENTATION_HEARTBEAT_NANOS = 15_000_000_000L
     const val ORIENTATION_MIN_CHANGE_DEG = 3.0
+    const val GAME_HISTORY = 32
+    const val GAME_WAIT_NANOS = 2_500_000_000L
+    const val GAME_MAX_GAP_NANOS = 60_000_000L
     const val SATELLITES_PERIOD_NANOS = 30_000_000_000L
     const val POWER_PERIOD_NANOS = 60_000_000_000L
     const val MIN_POWER_GAP_NANOS = 5_000_000_000L

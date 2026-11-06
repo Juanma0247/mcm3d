@@ -16,5 +16,9 @@ kotlin {
 }
 
 dependencies {
+  // Android ships the XmlPull API; the JVM tests use kXML, the same parser Android is built on.
+  compileOnly(libs.xmlpull)
+  testImplementation(libs.xmlpull)
+  testImplementation(libs.kxml2)
   testImplementation(libs.junit)
 }

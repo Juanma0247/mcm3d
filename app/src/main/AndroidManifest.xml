@@ -8,6 +8,7 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+  <uses-permission android:name="android.permission.INTERNET" />
 
   <uses-feature android:name="android.hardware.location.gps" android:required="false" />
   <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
@@ -17,6 +18,7 @@
   <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
 
   <application
+    android:name=".Mcm3dApplication"
     android:allowBackup="false"
     android:dataExtractionRules="@xml/data_extraction_rules"
     android:fullBackupContent="false"
@@ -27,16 +29,50 @@
     tools:targetApi="31">
     <activity
       android:name=".MainActivity"
-      android:exported="true">
+      android:exported="true"
+      android:launchMode="singleTask">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      <!-- Route files: other apps label GPX, KML and KMZ inconsistently, so the content decides. -->
+      <intent-filter android:label="@string/import_intent_label">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:scheme="content" />
+        <data android:mimeType="application/gpx+xml" />
+        <data android:mimeType="application/gpx" />
+        <data android:mimeType="application/vnd.google-earth.kml+xml" />
+        <data android:mimeType="application/vnd.google-earth.kmz" />
+        <data android:mimeType="application/xml" />
+        <data android:mimeType="text/xml" />
+        <data android:mimeType="application/octet-stream" />
+      </intent-filter>
+      <intent-filter android:label="@string/import_intent_label">
+        <action android:name="android.intent.action.SEND" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="application/gpx+xml" />
+        <data android:mimeType="application/gpx" />
+        <data android:mimeType="application/vnd.google-earth.kml+xml" />
+        <data android:mimeType="application/vnd.google-earth.kmz" />
+        <data android:mimeType="application/xml" />
+        <data android:mimeType="text/xml" />
+        <data android:mimeType="application/octet-stream" />
       </intent-filter>
     </activity>
     <service
       android:name=".recording.RecordingService"
       android:exported="false"
       android:foregroundServiceType="location" />
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="${applicationId}.files"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/file_paths" />
+    </provider>
   </application>
 
 </manifest>
