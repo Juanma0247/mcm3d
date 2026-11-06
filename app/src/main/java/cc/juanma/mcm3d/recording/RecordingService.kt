@@ -17,9 +17,10 @@ import androidx.core.content.ContextCompat
 import cc.juanma.mcm3d.MainActivity
 import cc.juanma.mcm3d.R
 import cc.juanma.mcm3d.appGraph
-import cc.juanma.mcm3d.core.route.RouteProgressTracker
+import cc.juanma.mcm3d.core.route.RouteGuide
 import cc.juanma.mcm3d.sensing.SensingThread
 import cc.juanma.mcm3d.ui.formatDistance
+import cc.juanma.mcm3d.ui.instructionText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -81,7 +82,7 @@ class RecordingService : Service() {
       val followRoute = follow?.let { id ->
         val route = routes.route(id)
         val geometry = routes.loadGeometry(id)
-        if (route != null && geometry != null) FollowRoute(id, route.name, RouteProgressTracker(geometry.lats, geometry.lons)) else null
+        if (route != null && geometry != null) FollowRoute(id, route.name, RouteGuide(geometry.lats, geometry.lons)) else null
       }
       val routeId = routes.createRecording(defaultOutingName(), startWallMs)
       val appender = withContext(Dispatchers.IO) { routes.openAppender(routeId, startWallMs) }
@@ -225,14 +226,14 @@ class RecordingService : Service() {
 
   private fun outingSummary(state: OutingState): String {
     if (state.starting) return getString(R.string.outing_starting)
-    val parts = mutableListOf(formatDistance(state.distanceM))
-    val progress = state.progress
+    val parts = mutableListOf<String>()
+    val instruction = state.instruction
     when {
       state.mode == RecordingMode.STILL -> parts += getString(R.string.outing_paused_short)
-      state.offRoute && progress != null -> parts += getString(R.string.outing_off_route_short, formatDistance(progress.offRouteM))
-      progress != null -> parts += getString(R.string.outing_remaining_short, formatDistance(progress.remainingM))
       !state.hasFix -> parts += getString(R.string.outing_searching_short)
+      instruction != null -> parts += instructionText(resources, instruction).let { (title, detail) -> listOfNotNull(title, detail).joinToString(" ") }
     }
+    parts += getString(R.string.outing_walked_short, formatDistance(state.distanceM))
     if (session != null) parts += getString(R.string.outing_with_field_test)
     return parts.joinToString(" · ")
   }

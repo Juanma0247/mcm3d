@@ -61,11 +61,7 @@ import cc.juanma.mcm3d.ui.components.BackButton
 import cc.juanma.mcm3d.ui.components.BottomActions
 import cc.juanma.mcm3d.ui.components.ElevationChart
 import cc.juanma.mcm3d.ui.components.LargeButtonHeight
-import cc.juanma.mcm3d.ui.components.MapLine
-import cc.juanma.mcm3d.ui.components.MapMarker
-import cc.juanma.mcm3d.ui.components.MarkerKind
 import cc.juanma.mcm3d.ui.components.MetricRow
-import cc.juanma.mcm3d.ui.components.RouteMap
 import cc.juanma.mcm3d.ui.components.SectionCard
 import cc.juanma.mcm3d.ui.components.SectionNote
 import cc.juanma.mcm3d.ui.components.StatGrid
@@ -75,7 +71,15 @@ import cc.juanma.mcm3d.ui.formatDescent
 import cc.juanma.mcm3d.ui.formatDistance
 import cc.juanma.mcm3d.ui.formatElevation
 import cc.juanma.mcm3d.ui.formatHoursMinutes
+import cc.juanma.mcm3d.ui.map.MapMarker
+import cc.juanma.mcm3d.ui.map.MapPolyline
+import cc.juanma.mcm3d.ui.map.MapView
+import cc.juanma.mcm3d.ui.map.MarkerKind
+import cc.juanma.mcm3d.ui.map.rememberMapState
 import cc.juanma.mcm3d.ui.theme.Palette
+import cc.juanma.mcm3d.core.route.Bounds
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -192,12 +196,20 @@ fun RouteDetailScreen(routeId: Long, app: AppViewModel, snackbar: SnackbarHostSt
       if (route.recording) item(key = "recording") { SectionNote(stringResource(R.string.detail_recording_note)) }
       geometry?.let { shape ->
         item(key = "map") {
-          RouteMap(
-            lines = listOf(MapLine(shape.lats, shape.lons, shape.size, Palette.Accent, 4.dp)),
+          val mapState = rememberMapState(shape.lats[0], shape.lons[0], 2f)
+          LaunchedEffect(shape) {
+            mapState.following = false
+            mapState.fit(Bounds(route.minLat, route.minLon, route.maxLat, route.maxLon))
+          }
+          MapView(
+            state = mapState,
+            lines = remember(shape) { listOf(MapPolyline(shape.lats, shape.lons, shape.size, Palette.Accent, 5f)) },
             markers = routeMarkers(shape, waypoints.map { it.waypoint.lat to it.waypoint.lon }),
+            interactive = false,
             modifier = Modifier
               .fillMaxWidth()
-              .aspectRatio(1.15f),
+              .aspectRatio(1.15f)
+              .clip(RoundedCornerShape(12.dp)),
           )
         }
       }

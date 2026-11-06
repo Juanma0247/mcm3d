@@ -38,13 +38,7 @@
 
   <string name="routes_title">Mis rutas</string>
   <string name="routes_diagnostics">Diagnóstico</string>
-  <string name="routes_import">Importar ruta</string>
   <string name="routes_new_outing">Nueva salida</string>
-  <string name="routes_empty_title">Aún no tienes rutas</string>
-  <string name="routes_empty_body">Importa un archivo GPX, KML o KMZ de Komoot, Wikiloc o Relive: desde esa app con Compartir o Abrir con, o aquí con Importar ruta. También puedes grabar una salida nueva.</string>
-  <string name="routes_importing">Importando ruta…</string>
-  <string name="route_source_imported">Importada · %1$s</string>
-  <string name="route_source_recorded">Grabada</string>
   <string name="route_badge_recording">Grabando</string>
   <string name="route_badge_elevation_pending">Alturas pendientes</string>
   <string name="outing_banner_title">Salida en curso</string>
@@ -97,39 +91,68 @@
   <string name="waypoint_unnamed">Punto sin nombre</string>
   <string name="waypoint_default_name">Punto %1$d</string>
 
-  <string name="outing_title">Salida en curso</string>
-  <string name="outing_following">Siguiendo: %1$s</string>
-  <string name="outing_free">Grabando una ruta nueva</string>
   <string name="outing_starting">Iniciando la salida…</string>
-  <string name="outing_status_searching">Buscando señal GPS</string>
-  <plurals name="outing_status_fix">
-    <item quantity="one">GPS ±%1$s · %2$d satélite</item>
-    <item quantity="many">GPS ±%1$s · %2$d satélites</item>
-    <item quantity="other">GPS ±%1$s · %2$d satélites</item>
-  </plurals>
-  <string name="outing_status_paused">En pausa: quieto</string>
   <string name="outing_paused_hint">El GPS está en pausa porque no te has desplazado en los últimos minutos. Se reanuda solo al caminar.</string>
   <string name="outing_time">Tiempo</string>
-  <string name="outing_distance">Distancia</string>
   <string name="outing_altitude">Altura</string>
-  <string name="outing_ascent">Desnivel positivo</string>
   <string name="outing_remaining">Falta</string>
-  <string name="outing_progress">%1$s de %2$s</string>
-  <string name="outing_on_route">En la ruta</string>
-  <string name="outing_off_route">Fuera de ruta: %1$s</string>
   <string name="outing_marks">Puntos marcados: %1$d</string>
   <string name="outing_finish">Terminar</string>
   <string name="outing_finish_title">¿Terminar la salida?</string>
   <string name="outing_finish_body">El recorrido grabado se guardará en Mis rutas.</string>
   <string name="outing_notification_title">Salida en curso</string>
   <string name="outing_paused_short">en pausa</string>
-  <string name="outing_off_route_short">fuera de ruta (%1$s)</string>
-  <string name="outing_remaining_short">faltan %1$s</string>
   <string name="outing_searching_short">buscando GPS</string>
   <string name="outing_with_field_test">prueba de campo activa</string>
   <string name="outing_default_name">Salida del %1$s</string>
 
+  <string name="outing_walked">Recorrido</string>
+  <string name="outing_walked_short">%1$s recorridos</string>
+  <string name="outing_searching_title">Buscando señal GPS…</string>
+  <string name="outing_searching_detail">Al aire libre tarda unos segundos; bajo techo puede tardar mucho o no lograrlo.</string>
+  <string name="outing_paused_title">En pausa: no te has movido</string>
+  <string name="outing_free_title">Grabando una ruta nueva</string>
+  <string name="outing_free_detail">Camina: tu recorrido se dibuja en el mapa.</string>
+
+  <string name="guide_go_to_start">Ve al inicio de la ruta</string>
+  <string name="guide_rejoin">Vuelve a la ruta</string>
+  <string name="guide_continue">Sigue por el camino</string>
+  <string name="guide_arrived">Llegaste al final de la ruta</string>
+  <string name="guide_at_distance">a %1$s</string>
+  <string name="guide_in">en %1$s</string>
+  <string name="guide_for_distance">durante %1$s</string>
+  <string name="guide_slight_left">Gira levemente a la izquierda</string>
+  <string name="guide_left">Gira a la izquierda</string>
+  <string name="guide_sharp_left">Gira fuerte a la izquierda</string>
+  <string name="guide_slight_right">Gira levemente a la derecha</string>
+  <string name="guide_right">Gira a la derecha</string>
+  <string name="guide_sharp_right">Gira fuerte a la derecha</string>
+  <string name="guide_u_turn">Da la vuelta</string>
+
+  <string name="home_add_route">Agregar ruta</string>
+  <string name="home_add_file">Importar archivo GPX, KML o KMZ</string>
+  <string name="home_add_session">Desde una prueba de campo</string>
+  <string name="home_location_needed">Activa la ubicación para ver dónde estás en el mapa.</string>
+  <string name="home_location_button">Activar ubicación</string>
+  <string name="home_empty">Aún no tienes rutas. Importa una desde Komoot, Wikiloc o Relive, créala desde una prueba de campo o graba una salida nueva.</string>
+  <string name="map_recenter">Centrar en mi posición</string>
+  <string name="map_north_up">Poner el norte arriba</string>
+  <string name="map_heading_up">Girar el mapa con el celular</string>
+
+  <string name="session_title">Crear ruta desde una prueba de campo</string>
+  <string name="session_empty">No hay pruebas de campo en este celular. Se graban en Diagnóstico, con Iniciar prueba.</string>
+  <string name="session_item">Prueba del %1$s</string>
+  <string name="session_trim_title">Recorta la ruta</string>
+  <string name="session_trim_hint">Mueve los extremos para dejar solo el tramo que quieres seguir, por ejemplo de tu casa a la universidad. Guíate por las horas.</string>
+  <string name="session_range">%1$s a %2$s · %3$s · %4$s</string>
+  <string name="session_name_label">Nombre de la ruta</string>
+  <string name="session_default_name">Ruta del %1$s</string>
+  <string name="session_save">Guardar ruta</string>
+  <string name="session_saved">Ruta guardada</string>
+  <string name="session_unreadable">No se pudo leer la grabación.</string>
+
   <string name="section_about">Acerca de</string>
+  <string name="about_map_attribution">Mapa: © colaboradores de OpenStreetMap, datos bajo licencia ODbL, descargados con Overpass API.</string>
   <string name="about_elevation_attribution">Datos de elevación: Terrain Tiles en AWS Open Data (Mapzen), con datos de SRTM, GMTED2010, ETOPO1 y otras fuentes.</string>
 
   <string name="section_gnss">GNSS</string>

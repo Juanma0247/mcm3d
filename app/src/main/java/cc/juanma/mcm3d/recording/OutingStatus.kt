@@ -1,5 +1,6 @@
 package cc.juanma.mcm3d.recording
 
+import cc.juanma.mcm3d.core.route.Instruction
 import cc.juanma.mcm3d.core.route.RouteProgress
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +25,9 @@ data class OutingState(
   val marks: Int = 0,
   val progress: RouteProgress? = null,
   val offRoute: Boolean = false,
-  val lastLat: Double? = null,
-  val lastLon: Double? = null,
+  val instruction: Instruction? = null,
+  val positionLat: Double? = null,
+  val positionLon: Double? = null,
 ) {
   companion object {
     const val NO_ROUTE = -1L

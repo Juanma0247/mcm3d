@@ -54,6 +54,31 @@ class RouteProgressTracker(private val lats: DoubleArray, private val lons: Doub
     lastAlong = Double.NaN
   }
 
+  /** Position at a distance along the route, clamped to its ends. */
+  fun pointAt(alongM: Double): Pair<Double, Double> {
+    val target = alongM.coerceIn(0.0, totalM)
+    var lo = 0
+    var hi = along.size - 1
+    while (hi - lo > 1) {
+      val mid = (lo + hi) / 2
+      if (along[mid] <= target) lo = mid else hi = mid
+    }
+    val span = along[hi] - along[lo]
+    val f = if (span <= 0.0) 0.0 else (target - along[lo]) / span
+    return Pair(lats[lo] + (lats[hi] - lats[lo]) * f, lons[lo] + (lons[hi] - lons[lo]) * f)
+  }
+
+  /** Index of the last vertex at or before [alongM], to split the route into walked and pending parts. */
+  fun indexAt(alongM: Double): Int {
+    var lo = 0
+    var hi = along.size - 1
+    while (hi - lo > 1) {
+      val mid = (lo + hi) / 2
+      if (along[mid] <= alongM) lo = mid else hi = mid
+    }
+    return lo
+  }
+
   private class Match(val along: Double, val distance: Double)
 
   private fun search(

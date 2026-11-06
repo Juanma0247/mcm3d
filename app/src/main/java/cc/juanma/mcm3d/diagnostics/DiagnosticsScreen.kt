@@ -126,6 +126,7 @@ fun DiagnosticsScreen(onBack: () -> Unit, viewModel: DiagnosticsViewModel = view
       item(key = "about") {
         SectionCard(stringResource(R.string.section_about)) {
           SectionNote(stringResource(R.string.version_label, BuildConfig.VERSION_NAME))
+          SectionNote(stringResource(R.string.about_map_attribution))
           SectionNote(stringResource(R.string.about_elevation_attribution))
         }
       }

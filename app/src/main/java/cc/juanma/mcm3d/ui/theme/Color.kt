@@ -22,5 +22,7 @@ internal object Palette {
   val Critical = Color(0xFFFF5A5F)
   val OnCritical = Color(0xFF2B0003)
   val Halo = Color(0xCC05070A)
+  val MapBackground = Color(0xFF0E1216)
+  val Walked = Color(0xFF6B7480)
   val Trace = Color(0xFF5CC8F0)
 }

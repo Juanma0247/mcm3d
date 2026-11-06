@@ -16,6 +16,7 @@ import cc.juanma.mcm3d.core.route.densify
 import cc.juanma.mcm3d.core.route.smoothAlongDistance
 import cc.juanma.mcm3d.elevation.ElevationWorker
 import cc.juanma.mcm3d.elevation.TerrariumTileStore
+import cc.juanma.mcm3d.zone.ZoneWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -92,7 +93,41 @@ class RouteRepository(
       throw error
     }
     ElevationWorker.schedule(context, id)
+    requestZone(points)
     id
+  }
+
+  /** Saves a finished track (for example a stretch of a field test) as a recorded route. */
+  suspend fun saveTrack(name: String, points: List<TrackPoint>): Long = withContext(Dispatchers.IO) {
+    require(points.size >= 2)
+    val stats = RouteStats.of(points)
+    val start = points.firstOrNull { it.hasTime }?.timeMs ?: TrackPoint.NO_TIME
+    val now = System.currentTimeMillis()
+    val route = RouteEntity(
+      name = name.trim().take(MAX_NAME_LENGTH),
+      source = RouteSource.RECORDED,
+      createdAtMs = if (start != TrackPoint.NO_TIME) start else now,
+      trackUpdatedAtMs = now,
+      pointCount = points.size,
+      elevationSource = if (stats.ascentM != null) ElevationSource.RECORDED else ElevationSource.NONE,
+    ).withStats(stats).withBounds(Bounds.of(points)!!)
+    val id = dao.insertRoute(route)
+    try {
+      tracks.write(id, start, points)
+    } catch (error: java.io.IOException) {
+      dao.delete(id)
+      throw error
+    }
+    requestZone(points)
+    id
+  }
+
+  private fun requestZone(points: List<TrackPoint>) {
+    ZoneWorker.ensureAlong(
+      context,
+      DoubleArray(points.size) { points[it].lat },
+      DoubleArray(points.size) { points[it].lon },
+    )
   }
 
   suspend fun rename(id: Long, name: String) {
@@ -151,6 +186,7 @@ class RouteRepository(
         elevationSource = if (stats.ascentM != null) ElevationSource.RECORDED else ElevationSource.NONE,
       ).withStats(stats).withBounds(Bounds.of(points)!!),
     )
+    requestZone(points)
     true
   }
 

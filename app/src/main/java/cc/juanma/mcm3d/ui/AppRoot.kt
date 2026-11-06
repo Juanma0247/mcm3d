@@ -24,7 +24,8 @@ import cc.juanma.mcm3d.diagnostics.DiagnosticsScreen
 import cc.juanma.mcm3d.outing.OutingScreen
 import cc.juanma.mcm3d.recording.RecordingService
 import cc.juanma.mcm3d.routes.RouteDetailScreen
-import cc.juanma.mcm3d.routes.RoutesScreen
+import cc.juanma.mcm3d.home.HomeScreen
+import cc.juanma.mcm3d.sessions.SessionImportScreen
 
 @Composable
 fun AppRoot(app: AppViewModel) {
@@ -44,7 +45,7 @@ fun AppRoot(app: AppViewModel) {
     ),
     entryProvider = entryProvider {
       entry<Screen.Routes> {
-        RoutesScreen(
+        HomeScreen(
           app = app,
           snackbar = snackbar,
           onNewOuting = { startOuting(null) },
@@ -60,6 +61,7 @@ fun AppRoot(app: AppViewModel) {
       }
       entry<Screen.Outing> { OutingScreen(app = app, snackbar = snackbar) }
       entry<Screen.Diagnostics> { DiagnosticsScreen(onBack = app::back) }
+      entry<Screen.SessionImport> { SessionImportScreen(app = app, snackbar = snackbar) }
     },
   )
 }

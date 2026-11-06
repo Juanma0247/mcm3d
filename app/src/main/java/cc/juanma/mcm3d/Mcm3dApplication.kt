@@ -8,6 +8,7 @@ import cc.juanma.mcm3d.data.RouteRepository
 import cc.juanma.mcm3d.data.TrackStore
 import cc.juanma.mcm3d.elevation.TerrariumTileStore
 import cc.juanma.mcm3d.importing.RouteImporter
+import cc.juanma.mcm3d.zone.ZoneStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,6 +39,8 @@ class AppGraph(context: Context) {
   }
 
   val importer: RouteImporter by lazy { RouteImporter(appContext, routes) }
+
+  val zones: ZoneStore by lazy { ZoneStore(File(appContext.filesDir, "zones")) }
 }
 
 val Context.appGraph: AppGraph get() = (applicationContext as Mcm3dApplication).graph

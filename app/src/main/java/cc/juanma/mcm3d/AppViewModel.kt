@@ -21,6 +21,7 @@ sealed interface Screen {
   data class RouteDetail(val routeId: Long) : Screen
   data object Outing : Screen
   data object Diagnostics : Screen
+  data object SessionImport : Screen
 }
 
 class UiMessage(@StringRes val text: Int)

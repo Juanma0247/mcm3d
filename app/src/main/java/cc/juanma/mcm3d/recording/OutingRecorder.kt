@@ -15,16 +15,16 @@ import cc.juanma.mcm3d.core.geo.distanceMeters
 import cc.juanma.mcm3d.core.recording.FixFilter
 import cc.juanma.mcm3d.core.recording.StillnessDetector
 import cc.juanma.mcm3d.core.route.GainAccumulator
-import cc.juanma.mcm3d.core.route.OffRouteDetector
+import cc.juanma.mcm3d.core.route.Instruction
 import cc.juanma.mcm3d.core.route.RouteProgress
-import cc.juanma.mcm3d.core.route.RouteProgressTracker
+import cc.juanma.mcm3d.core.route.RouteGuide
 import cc.juanma.mcm3d.core.route.TrackPoint
 import cc.juanma.mcm3d.core.route.Waypoint
 import cc.juanma.mcm3d.data.TrackAppender
 import cc.juanma.mcm3d.sensing.GnssMonitor
 import cc.juanma.mcm3d.sensing.SensingThread
 
-class FollowRoute(val routeId: Long, val name: String, val tracker: RouteProgressTracker)
+class FollowRoute(val routeId: Long, val name: String, val guide: RouteGuide)
 
 /**
  * Records an outing as a compact track: GNSS positions that add information, with altitude from
@@ -49,7 +49,6 @@ class OutingRecorder(
   private val stillness = StillnessDetector()
   private val fusion = AltitudeFusion()
   private val gain = GainAccumulator()
-  private val offRoute = OffRouteDetector()
 
   private var running = false
   private var startNanos = 0L
@@ -69,6 +68,10 @@ class OutingRecorder(
   private var marks = 0
   private var pendingMarks = 0
   private var progress: RouteProgress? = null
+  private var offRoute = false
+  private var instruction: Instruction? = null
+  private var positionLat = Double.NaN
+  private var positionLon = Double.NaN
 
   private var lastFlushNanos = 0L
   private var lastStillCheckNanos = 0L
@@ -201,11 +204,15 @@ class OutingRecorder(
 
     var important = false
     if (accuracy.isNaN() || accuracy <= MAX_ACCURACY_M) {
+      positionLat = location.latitude
+      positionLon = location.longitude
       follow?.let {
-        val current = it.tracker.update(location.latitude, location.longitude)
-        progress = current
-        val wasOff = offRoute.offRoute
-        if (offRoute.update(current.offRouteM, accuracy) != wasOff) important = true
+        val guidance = it.guide.update(location.latitude, location.longitude, accuracy)
+        progress = guidance.progress
+        if (guidance.offRoute != offRoute) important = true
+        offRoute = guidance.offRoute
+        if (instruction?.javaClass != guidance.instruction.javaClass) important = true
+        instruction = guidance.instruction
       }
       if (pendingMarks > 0 && isGoodForMark(location)) {
         emitPendingMarks(location)
@@ -313,9 +320,10 @@ class OutingRecorder(
         points = points,
         marks = marks,
         progress = progress,
-        offRoute = follow != null && offRoute.offRoute,
-        lastLat = if (hasLastPoint) lastPointLat else null,
-        lastLon = if (hasLastPoint) lastPointLon else null,
+        offRoute = follow != null && offRoute,
+        instruction = instruction,
+        positionLat = positionLat.takeUnless { it.isNaN() },
+        positionLon = positionLon.takeUnless { it.isNaN() },
       ),
     )
   }
